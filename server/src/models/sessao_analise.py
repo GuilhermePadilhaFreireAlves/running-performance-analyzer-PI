@@ -50,6 +50,7 @@ class SessaoAnalise(Base):
         ForeignKey("usuario.id", ondelete="CASCADE"), nullable=False, index=True
     )
     pace_min_km: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fps: Mapped[float | None] = mapped_column(Float, nullable=True)
     nota_geral: Mapped[float | None] = mapped_column(Float, nullable=True)
     feedback_ia: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
