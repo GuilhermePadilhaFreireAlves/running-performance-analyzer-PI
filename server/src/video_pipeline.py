@@ -460,6 +460,7 @@ def run_pipeline(
 
         _persistir_angulos_joelho(session, sessao_id, result.frames)
         _persistir_angulos_cotovelo(session, sessao_id, result.frames)
+        _persistir_cadencia(session, sessao_id, result.frames, result.fps)
     finally:
         session.close()
         if delete_video:
@@ -538,6 +539,41 @@ def _persistir_angulos_cotovelo(
                 apenas_informativa=False,
             )
         )
+    session.commit()
+
+
+def _persistir_cadencia(
+    session: Session,
+    sessao_id: int,
+    frames: list[FrameKeypoints],
+    fps: float,
+) -> None:
+    """Calcula e grava em METRICA a cadência (spm) do corredor.
+
+    US-010: marcada como `apenas_informativa=True` — a cadência varia
+    diretamente com o pace e, conforme o PRD, não deve penalizar a nota
+    geral. Não grava quando o cálculo não produz valor (sem contatos
+    detectados) e é no-op silenciosamente quando `fps <= 0`. Não altera
+    o status da sessão — a transição para `concluido` é responsabilidade
+    de US-016.
+    """
+    from server.src.biomechanics.cadencia import calcular_cadencia
+    from server.src.models.metrica import Metrica
+
+    if fps <= 0:
+        return
+    resultado = calcular_cadencia(frames, fps)
+    if resultado is None:
+        return
+    session.add(
+        Metrica(
+            sessao_id=sessao_id,
+            tipo="cadencia",
+            valor=resultado.cadencia_spm,
+            unidade="spm",
+            apenas_informativa=True,
+        )
+    )
     session.commit()
 
 

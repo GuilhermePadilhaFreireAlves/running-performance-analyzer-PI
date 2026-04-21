@@ -5,6 +5,11 @@ acoplado ao pipeline de pose (`server.src.video_pipeline.run_pipeline`)
 pelas histórias de cálculo (US-007 em diante).
 """
 
+from server.src.biomechanics.cadencia import (
+    MSG_FPS_INVALIDO,
+    Cadencia,
+    calcular_cadencia,
+)
 from server.src.biomechanics.cotovelo import (
     KP_COTOVELO_DIR,
     KP_COTOVELO_ESQ,
@@ -50,13 +55,16 @@ __all__ = [
     "KP_TORNOZELO_DIR",
     "KP_TORNOZELO_ESQ",
     "MSG_ALTURA_AUSENTE",
+    "MSG_FPS_INVALIDO",
     "MSG_SEM_FRAMES_VALIDOS",
     "AnguloCotoveloLado",
     "AnguloCotoveloResultado",
     "AnguloJoelhoContatoInicial",
     "AnguloJoelhoLado",
+    "Cadencia",
     "FatorEscala",
     "calcular_angulo_cotovelo",
     "calcular_angulo_joelho_contato_inicial",
+    "calcular_cadencia",
     "calcular_fator_escala",
 ]
