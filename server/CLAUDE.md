@@ -17,6 +17,11 @@ server/
       sessao_analise.py
       metrica.py
       recomendacao.py
+    biomechanics/             # pure-math métricas sobre keypoints
+      __init__.py             # re-exporta a API pública de cada módulo
+      escala.py               # calcular_fator_escala (US-007)
+  tests/                      # pytest (mypy-coberto)
+    test_escala.py
 ```
 
 ## Commands (run from repo root)
@@ -35,6 +40,9 @@ alembic -c server/alembic.ini revision --autogenerate -m "<message>"   # against
 
 # typecheck
 mypy
+
+# tests
+python -m pytest server/tests/
 ```
 
 `DATABASE_URL` defaults to `sqlite:///./server_dev.db` for quick local runs; Alembic auto-enables `render_as_batch` when the URL is SQLite.
@@ -52,6 +60,7 @@ mypy
 - Background pipeline (`run_pipeline`) owns the full keypoint → metrics → recomendações chain in-memory. It opens its own session via `SessionLocal` (or an injected `session_factory`), advances `sessao.status` through `detectando_pose → calculando_metricas → concluido` on success or to `erro_qualidade_keypoints` / `erro_multiplas_pessoas` on failure, persists `sessao.fps`, and deletes the uploaded video file at the end. Future metric stories extend `run_pipeline` in place — do not persist keypoints between invocations.
 - Keypoint constants live in `video_pipeline`: `NUM_KEYPOINTS=17`, `KEYPOINT_SCORE_THRESHOLD=0.5` (below → `None`), `LOW_QUALITY_KP_THRESHOLD=9` (strict majority of 17). Use `smooth_frames(frames, window=5)` output (moving average, preserves `None`) as the input for any downstream biomechanics calc, not raw extractor output.
 - Multipart uploads require `python-multipart` (in `requirements.txt`). Endpoints use `pace_min_km: Annotated[float, Form()]` + `file: Annotated[UploadFile, File()]`. Persist uploads to `UPLOAD_DIR` env var (default `./uploads/`, gitignored) before validation, and always clean up on validation failure.
+- Pure-math biomechanics utilities (ângulos, fator de escala, overstriding, …) vivem em `server/src/biomechanics/<metric>.py` e são re-exportados pelo `__init__.py` do pacote. Consomem a saída suavizada de `video_pipeline.smooth_frames(...)` (tipo `list[FrameKeypoints]`), devolvem `dataclass(frozen=True)` e levantam `ValueError(MSG_*)` com mensagens de módulo para erros de domínio. Testes correspondentes em `server/tests/test_<metric>.py`.
 
 ## Gotchas
 

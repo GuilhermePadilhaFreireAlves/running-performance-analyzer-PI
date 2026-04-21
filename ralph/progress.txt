@@ -24,6 +24,9 @@ Started: Sun Apr 19 15:32:14 PDT 2026
 - Heavy-pipeline protocols follow the same lazy pattern as `VideoValidator`: `cv2`/`ultralytics` imports live inside method bodies, never at module top, so `import server.src.video_pipeline` never loads YOLO.
 - COCO keypoint filtering: `KEYPOINT_SCORE_THRESHOLD = 0.5` — below that, set keypoint to `None` (treated as NaN downstream). A frame is "low quality" when ≥ `LOW_QUALITY_KP_THRESHOLD` (= 9, majority of 17) of its keypoints are None. Reuse these constants from `video_pipeline` for any downstream biomechanics code.
 - `smooth_frames(frames, window=5)` applies a moving-average on x,y per keypoint, **preserving None** — it never interpolates over a dropped frame. Any new keypoint-consuming story should accept the smoothed series (post-suavização) as input, not raw extractor output.
+- Biomechanics utilities live at `server/src/biomechanics/<metric>.py`; each module re-exports its public API via `server/src/biomechanics/__init__.py`. The package is the single import point for downstream stories (US-008 onward) and for `run_pipeline` when it wires up metric persistence.
+- Unit tests for biomechanics go in `server/tests/test_<metric>.py` (pytest). Run with `python -m pytest server/tests/` from repo root. `server/tests` is included in `mypy.ini` so test helpers must be fully typed (same strictness as `server/src`).
+- Domain errors from biomechanics utilities raise `ValueError` with a module-level `MSG_*` constant as the message, so callers can match on identity and tests use `pytest.raises(ValueError, match=re.escape(MSG_*))`.
 
 ---
 
@@ -100,4 +103,15 @@ Started: Sun Apr 19 15:32:14 PDT 2026
   - The status `calculando_metricas` is the "exit" state of US-006 success; subsequent metric-calculating stories must transition the session from `calculando_metricas → concluido` once their work persists METRICA / RECOMENDACAO rows.
   - `_default_pose_extractor` and `_default_validator` are module-level singletons. To override in tests, either pass `extractor=` kwarg to `run_pipeline` or rebind the module attribute (no FastAPI override hook exists for background tasks).
   - `LOW_QUALITY_KP_THRESHOLD` is `NUM_KEYPOINTS // 2 + 1 = 9` (strict majority of 17); change `NUM_KEYPOINTS` only if the pose model changes — not if you want to tune the gate.
+---
+
+## [2026-04-21 14:30] - US-007 Utilitário de fator de escala pixels→cm
+- Added `server/src/biomechanics/escala.py` with `calcular_fator_escala(frames, altura_real_cm)` returning a `FatorEscala` dataclass (`fator_escala`, `altura_pixels_media`, `frames_usados`). Altura em pixels = euclidiana entre nariz (KP 0) e ponto médio dos tornozelos (KP 15/16); frames sem os três keypoints válidos são ignorados; média entre frames válidos estabiliza o fator. `altura_real_cm` nula, zero ou negativa levanta `ValueError(MSG_ALTURA_AUSENTE)`; ausência de frames utilizáveis levanta `ValueError(MSG_SEM_FRAMES_VALIDOS)`.
+- Criado pacote `server/src/biomechanics/` + `server/tests/` com 8 testes pytest (altura conhecida 175 cm / 500 px → 0.35 cm/px, média sobre múltiplos frames, ignorar frames inválidos, altura None/≤0, todos os frames inválidos, lista vazia, distância diagonal). Incluído `server/tests` em `mypy.ini`.
+- Files: `server/src/biomechanics/__init__.py` (novo), `server/src/biomechanics/escala.py` (novo), `server/tests/__init__.py` (novo), `server/tests/test_escala.py` (novo), `mypy.ini` (adicionado `server/tests`). Pytest: 8 passed; mypy: 26 files clean; uvicorn boots.
+- **Learnings for future iterations:**
+  - Reuse `calcular_fator_escala` from US-012 (overstriding) e US-014 (oscilação vertical): ambos convertem pixels→cm via `fator_escala`. Repasse a lista suavizada (pós-`smooth_frames`) como entrada, nunca os keypoints brutos.
+  - Para calcular "altura em pixels" o código usa `math.hypot(dx, dy)` (distância euclidiana), não apenas ΔY — corredor inclinado continua com altura correta. Mantenha essa convenção nas novas métricas.
+  - `FrameKeypoints.keypoints[i]` pode ser `None` quando o score < 0.5; sempre faça o guard `kp is not None` antes de desempacotar `(x, y, score)`. Esta é a mesma convenção do pipeline de pose (US-006).
+  - Quando o utilitário precisa de altura do usuário, obtenha via `usuario.altura_cm` (coluna `NOT NULL` no modelo). O ValueError é de segurança defensiva — em produção, o backend já garante a presença da altura no registro.
 ---
