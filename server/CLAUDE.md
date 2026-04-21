@@ -47,6 +47,7 @@ mypy
 - Enum-valued columns: VARCHAR + `CheckConstraint("col IN (...)")` for Postgres/SQLite portability. Export the tuple of allowed values as a module-level constant (e.g. `SESSAO_STATUS_VALUES`) so API/validation layers can reuse it.
 - Keep migrations dialect-portable: prefer `sa.false()`, `sa.func.now()`, `sa.text(...)` over raw dialect literals.
 - FastAPI endpoints must declare return types — mypy is configured with `disallow_untyped_defs = True` for `server/src/**`.
+- Protect private routes with `from server.src.auth import CurrentUser` and a `user: CurrentUser` parameter. The dependency decodes the JWT, loads the `Usuario`, and emits a uniform 401 (`"Credenciais inválidas"`/`"Não autenticado"`) on every failure path. Tokens are minted by `server.src.security.create_access_token(user_id)` and signed with `SECRET_KEY` (env var, dev default in `security.py`).
 
 ## Gotchas
 
