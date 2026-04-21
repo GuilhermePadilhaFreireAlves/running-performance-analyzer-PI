@@ -31,6 +31,7 @@ Started: Sun Apr 19 15:32:14 PDT 2026
 - Convenção de ângulo do joelho no **backend** (US-008+) é o ângulo interno (perna estendida = 180°), diferente da convenção `180-internal` do legado em `processing/src/mainGraph.py`. Ao tocar qualquer módulo biomecânico novo, mantenha a convenção interna (arccos do produto escalar normalizado).
 - Detecção de contato inicial: picos locais estritos de Y do tornozelo (helper privado em `biomechanics/joelho.py`). Bordas nunca são pico. Reutilize esta ideia para US-010 (cadência) e US-013 (TCS).
 - Métricas por-lado **sem ciclos** (ângulo médio de cotovelo, etc.) usam o shape `AnguloXxxLado(angulo_medio_graus, frames_validos)` — campo `frames_validos: int` em vez de `frames_contato: tuple[int, ...]`. Reserve `frames_contato` para métricas de ciclo (joelho no contato, TCS, overstriding).
+- Cálculos dependentes de tempo real (cadência, TCS) recebem `fps` como parâmetro explícito de `calcular_<metric>(frames, fps)` e levantam `ValueError(MSG_FPS_INVALIDO)` para `fps <= 0`. Os helpers `_persistir_<metric>` em `video_pipeline.py` repassam `result.fps` — a camada biomecânica nunca lê `sessao.fps` nem toca o ORM.
 
 ---
 
@@ -142,4 +143,16 @@ Started: Sun Apr 19 15:32:14 PDT 2026
   - O helper `_angulo_interno(a, b, c)` aparece tanto em `joelho.py` quanto em `cotovelo.py` — duplicação intencional por enquanto, já que cada módulo mantém seus próprios índices COCO. Se surgir uma terceira cópia (tronco, etc.), valerá a pena extrair para `biomechanics/_angulos.py`.
   - O módulo de cotovelo **não detecta ciclos** — ele só itera frame a frame e média. Não tente forçar picos aqui: o PRD pede média simples ("sobre todos os frames válidos do vídeo").
   - Convenção mantida: braço estendido = 180°, flexão máxima → 0°. Diferente de `processing/src/mainGraph.py` (convenção `180 - internal`); backend usa interna direta.
+---
+
+## [2026-04-21 15:30] - US-010 Cálculo de cadência (spm) marcado como apenas informativo
+- Novo módulo `server/src/biomechanics/cadencia.py` com `calcular_cadencia(frames, fps)` retornando `Cadencia(cadencia_spm, contatos_pe_direito, duracao_segundos)` ou `None`. Detecção de contato inicial por picos locais estritos de Y do tornozelo direito (KP 16) — mesma lógica de `joelho._find_initial_contact_indices`. Fórmula: `(n_contatos × 2 / duracao_seg) × 60`, com `duracao_seg = len(frames) / fps`. `fps <= 0` levanta `ValueError(MSG_FPS_INVALIDO)`; lista vazia ou zero picos ⇒ `None`.
+- `run_pipeline` chama `_persistir_cadencia(session, sessao_id, frames, fps)` após cotovelo. Persiste uma única `Metrica(tipo='cadencia', valor=..., unidade='spm', apenas_informativa=True)` quando há valor; no-op silencioso para `fps <= 0` ou `resultado is None`. Não altera o status da sessão.
+- 7 testes pytest em `server/tests/test_cadencia.py`: cadência básica (3 picos / 1s / 60fps ⇒ 360 spm), conversão via fps (mesmos frames, fps distintos ⇒ cadência proporcional), multiplicação por 2 explícita (1 pico ⇒ 120 spm), picos do pé esquerdo ignorados (pé direito ausente ⇒ None), sem picos ⇒ None, lista vazia ⇒ None, `fps <= 0` ⇒ `ValueError(MSG_FPS_INVALIDO)`. Smoke test in-memory SQLite confirma persistência em METRICA com `apenas_informativa=True`. Mypy limpo (32 arquivos); pytest 31/31 passing; uvicorn sobe sem erro.
+- Files: `server/src/biomechanics/cadencia.py` (novo), `server/src/biomechanics/__init__.py` (re-export), `server/src/video_pipeline.py` (helper `_persistir_cadencia`), `server/tests/test_cadencia.py` (novo).
+- **Learnings for future iterations:**
+  - Métricas `apenas_informativa=True` (cadência, TCS absoluto em US-013) não afetam a nota geral mas **são** persistidas em METRICA — US-016 usa este flag para filtrar o que entra no cálculo de penalização. Ao adicionar futura métrica informativa, setar o flag explicitamente no construtor de `Metrica`.
+  - Helpers de detecção de contato (`_find_initial_contact_indices` + `_ankle_y`) aparecem em `joelho.py` e agora em `cadencia.py` — duplicação intencional por hora (mesma convenção do `_angulo_interno` duplicado entre joelho/cotovelo). US-013 (TCS) provavelmente será a terceira cópia; quando houver a terceira, valerá extrair para `biomechanics/_picos.py`.
+  - `_persistir_*` que dependem de dados extras do `PoseExtractionResult` (como `fps`) devem receber esse parâmetro explicitamente a partir de `run_pipeline(..., result.fps)`, mantendo a biomecânica pura (sem acesso a `sessao.fps` nem ao ORM).
+  - A assinatura pública dos cálculos que precisam de tempo real segue `calcular_<metric>(frames, fps)`, levantando `ValueError(MSG_FPS_INVALIDO)` quando `fps <= 0`. Use o mesmo padrão em US-013 (TCS) que também depende de fps.
 ---
