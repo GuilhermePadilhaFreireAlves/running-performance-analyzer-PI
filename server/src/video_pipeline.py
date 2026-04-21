@@ -473,6 +473,7 @@ def run_pipeline(
         _persistir_simetria(
             session, sessao_id, result.frames, result.fps, altura_cm
         )
+        _finalizar_analise(session, sessao_id)
     finally:
         session.close()
         if delete_video:
@@ -815,6 +816,59 @@ def _persistir_simetria(
                 apenas_informativa=False,
             )
         )
+    session.commit()
+
+
+def _finalizar_analise(session: Session, sessao_id: int) -> None:
+    """Gera recomendações, calcula a nota geral e conclui a sessão (US-016).
+
+    Carrega todas as linhas de ``METRICA`` da sessão, filtra as marcadas
+    como ``apenas_informativa=True`` (cadência, TCS absoluto) — que por
+    decisão do PRD não penalizam a nota geral — e delega a análise para
+    :func:`server.src.biomechanics.recomendacoes.analisar_metricas`. Cada
+    :class:`RecomendacaoGerada` vira uma linha em ``RECOMENDACAO``; a
+    ``nota_geral`` e o ``feedback_ia`` são persistidos em ``SESSAO_ANALISE``.
+    Por fim, o status transita para ``concluido`` — esta é a transição
+    final do pipeline (demais ``_persistir_*`` não alteram o status).
+    """
+    from server.src.biomechanics.recomendacoes import analisar_metricas
+    from server.src.models.metrica import Metrica
+    from server.src.models.recomendacao import Recomendacao
+
+    sessao = session.get(SessaoAnalise, sessao_id)
+    if sessao is None:
+        logger.warning(
+            "Sessão %s não encontrada ao finalizar análise; ignorando.",
+            sessao_id,
+        )
+        return
+
+    metricas = (
+        session.query(Metrica)
+        .filter(Metrica.sessao_id == sessao_id)
+        .all()
+    )
+    entrada: list[tuple[str, float]] = [
+        (m.tipo, float(m.valor))
+        for m in metricas
+        if not m.apenas_informativa and m.valor is not None
+    ]
+
+    resultado = analisar_metricas(entrada)
+
+    for rec in resultado.recomendacoes:
+        session.add(
+            Recomendacao(
+                sessao_id=sessao_id,
+                categoria=rec.categoria,
+                descricao=rec.descricao,
+                severidade=rec.severidade,
+            )
+        )
+
+    sessao.nota_geral = resultado.nota_geral
+    sessao.feedback_ia = resultado.feedback_ia
+    sessao.status = "concluido"
     session.commit()
 
 
