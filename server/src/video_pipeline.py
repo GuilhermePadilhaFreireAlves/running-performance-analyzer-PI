@@ -459,6 +459,7 @@ def run_pipeline(
         )
 
         _persistir_angulos_joelho(session, sessao_id, result.frames)
+        _persistir_angulos_cotovelo(session, sessao_id, result.frames)
     finally:
         session.close()
         if delete_video:
@@ -495,6 +496,43 @@ def _persistir_angulos_joelho(
             Metrica(
                 sessao_id=sessao_id,
                 tipo="angulo_joelho_dir",
+                valor=resultado.direito.angulo_medio_graus,
+                unidade="graus",
+                apenas_informativa=False,
+            )
+        )
+    session.commit()
+
+
+def _persistir_angulos_cotovelo(
+    session: Session, sessao_id: int, frames: list[FrameKeypoints]
+) -> None:
+    """Calcula e grava em METRICA o ângulo médio do cotovelo esq/dir.
+
+    US-009: média sobre todos os frames válidos do vídeo. Não grava o lado
+    cujo cálculo não produz valor (nenhum frame com os três keypoints do
+    lado em questão). Não altera o status da sessão — a transição para
+    `concluido` é responsabilidade de US-016.
+    """
+    from server.src.biomechanics.cotovelo import calcular_angulo_cotovelo
+    from server.src.models.metrica import Metrica
+
+    resultado = calcular_angulo_cotovelo(frames)
+    if resultado.esquerdo is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="angulo_cotovelo_esq",
+                valor=resultado.esquerdo.angulo_medio_graus,
+                unidade="graus",
+                apenas_informativa=False,
+            )
+        )
+    if resultado.direito is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="angulo_cotovelo_dir",
                 valor=resultado.direito.angulo_medio_graus,
                 unidade="graus",
                 apenas_informativa=False,
