@@ -28,6 +28,7 @@ from server.src.video_pipeline import FrameKeypoints
 
 KP_QUADRIL_ESQ = 11
 KP_QUADRIL_DIR = 12
+KP_TORNOZELO_ESQ = 15
 KP_TORNOZELO_DIR = 16
 
 
@@ -37,6 +38,18 @@ class OscilacaoVertical:
 
     oscilacao_media_cm: float
     ciclos_processados: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class OscilacaoVerticalPorLado:
+    """Oscilação vertical do CoM (cm) delimitada por ciclos de cada pé.
+
+    Cada lado é `None` quando há menos de dois contatos do pé correspondente
+    ou nenhum ciclo com ao menos dois frames de Y_CoM válidos.
+    """
+
+    esquerdo: OscilacaoVertical | None
+    direito: OscilacaoVertical | None
 
 
 def _ankle_y(frame: FrameKeypoints, idx: int) -> float | None:
@@ -83,22 +96,15 @@ def _y_com(frame: FrameKeypoints) -> float | None:
     return (qe[1] + qd[1]) / 2.0
 
 
-def calcular_oscilacao_vertical(
-    frames: Sequence[FrameKeypoints], fator_escala: float
+def _calcular_oscilacao_para_tornozelo(
+    frames: Sequence[FrameKeypoints],
+    fator_escala: float,
+    tornozelo_idx: int,
 ) -> OscilacaoVertical | None:
-    """Calcula a oscilação vertical média do CoM em cm, por ciclo de passada.
-
-    Para cada par de contatos iniciais consecutivos do pé direito ``(i, j)``:
-      1. Coleta ``Y_CoM[frame]`` no intervalo fechado ``[i, j]`` (ignorando
-         frames sem ambos os quadris válidos).
-      2. ``ΔY_pixels = max(Y_CoM) - min(Y_CoM)``.
-      3. Converte para cm via ``ΔY_pixels × fator_escala``.
-
-    A média é calculada sobre os ciclos com pelo menos dois frames de
-    ``Y_CoM`` válidos. Retorna ``None`` quando há menos de dois contatos
-    detectados ou nenhum ciclo válido.
+    """Oscilação vertical média do CoM em cm, delimitada pelos contatos
+    iniciais do tornozelo indicado em ``tornozelo_idx``.
     """
-    contatos = _find_initial_contact_indices(frames, KP_TORNOZELO_DIR)
+    contatos = _find_initial_contact_indices(frames, tornozelo_idx)
     if len(contatos) < 2:
         return None
 
@@ -124,4 +130,44 @@ def calcular_oscilacao_vertical(
     return OscilacaoVertical(
         oscilacao_media_cm=media,
         ciclos_processados=tuple(ciclos_idx),
+    )
+
+
+def calcular_oscilacao_vertical(
+    frames: Sequence[FrameKeypoints], fator_escala: float
+) -> OscilacaoVertical | None:
+    """Calcula a oscilação vertical média do CoM em cm, por ciclo de passada.
+
+    Para cada par de contatos iniciais consecutivos do pé direito ``(i, j)``:
+      1. Coleta ``Y_CoM[frame]`` no intervalo fechado ``[i, j]`` (ignorando
+         frames sem ambos os quadris válidos).
+      2. ``ΔY_pixels = max(Y_CoM) - min(Y_CoM)``.
+      3. Converte para cm via ``ΔY_pixels × fator_escala``.
+
+    A média é calculada sobre os ciclos com pelo menos dois frames de
+    ``Y_CoM`` válidos. Retorna ``None`` quando há menos de dois contatos
+    detectados ou nenhum ciclo válido.
+    """
+    return _calcular_oscilacao_para_tornozelo(
+        frames, fator_escala, KP_TORNOZELO_DIR
+    )
+
+
+def calcular_oscilacao_vertical_por_lado(
+    frames: Sequence[FrameKeypoints], fator_escala: float
+) -> OscilacaoVerticalPorLado:
+    """Calcula a oscilação vertical do CoM separadamente por pé.
+
+    O ciclo do lado esquerdo é delimitado pelos contatos iniciais do
+    tornozelo esquerdo (KP 15); do lado direito, pelo tornozelo direito
+    (KP 16). Reutilizado pela simetria de oscilação (US-015), que compara
+    a oscilação média entre os ciclos iniciados por cada pé.
+    """
+    return OscilacaoVerticalPorLado(
+        esquerdo=_calcular_oscilacao_para_tornozelo(
+            frames, fator_escala, KP_TORNOZELO_ESQ
+        ),
+        direito=_calcular_oscilacao_para_tornozelo(
+            frames, fator_escala, KP_TORNOZELO_DIR
+        ),
     )

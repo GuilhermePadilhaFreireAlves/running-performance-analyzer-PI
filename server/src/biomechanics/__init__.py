@@ -41,12 +41,19 @@ from server.src.biomechanics.joelho import (
 )
 from server.src.biomechanics.oscilacao import (
     OscilacaoVertical,
+    OscilacaoVerticalPorLado,
     calcular_oscilacao_vertical,
+    calcular_oscilacao_vertical_por_lado,
 )
 from server.src.biomechanics.overstriding import (
     OverstridingLado,
     OverstridingResultado,
     calcular_overstriding,
+)
+from server.src.biomechanics.simetria import (
+    SimetriaResultado,
+    calcular_simetria,
+    indice_simetria,
 )
 from server.src.biomechanics.tcs import (
     TcsLado,
@@ -87,8 +94,10 @@ __all__ = [
     "FatorEscala",
     "InclinacaoTronco",
     "OscilacaoVertical",
+    "OscilacaoVerticalPorLado",
     "OverstridingLado",
     "OverstridingResultado",
+    "SimetriaResultado",
     "TcsLado",
     "TcsResultado",
     "calcular_angulo_cotovelo",
@@ -97,6 +106,9 @@ __all__ = [
     "calcular_fator_escala",
     "calcular_inclinacao_tronco",
     "calcular_oscilacao_vertical",
+    "calcular_oscilacao_vertical_por_lado",
     "calcular_overstriding",
+    "calcular_simetria",
     "calcular_tcs",
+    "indice_simetria",
 ]

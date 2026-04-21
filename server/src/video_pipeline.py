@@ -470,6 +470,9 @@ def run_pipeline(
             session, sessao_id, result.frames, altura_cm
         )
         _persistir_tcs(session, sessao_id, result.frames, result.fps)
+        _persistir_simetria(
+            session, sessao_id, result.frames, result.fps, altura_cm
+        )
     finally:
         session.close()
         if delete_video:
@@ -746,6 +749,70 @@ def _persistir_tcs(
                 valor=resultado.direito.tcs_medio_ms,
                 unidade="ms",
                 apenas_informativa=True,
+            )
+        )
+    session.commit()
+
+
+def _persistir_simetria(
+    session: Session,
+    sessao_id: int,
+    frames: list[FrameKeypoints],
+    fps: float,
+    altura_cm: float | None,
+) -> None:
+    """Calcula e grava em METRICA os índices de simetria esq/dir (US-015).
+
+    Três índices são persistidos em ``simetria_tcs`` (%) / ``simetria_joelho``
+    (%) / ``simetria_oscilacao`` (%). Cada linha é gravada apenas quando o
+    cálculo produz valor — lados ausentes ⇒ índice ``None`` ⇒ no-op
+    silencioso para aquela simetria específica.
+
+    Converte ``altura_cm`` em ``fator_escala`` via US-007; falhas do fator
+    (altura ausente/≤0, nenhum frame válido) degradam a simetria de
+    oscilação para ``None`` sem interromper o pipeline. Não altera o status
+    da sessão — a transição para ``concluido`` pertence a US-016.
+    """
+    from server.src.biomechanics.escala import calcular_fator_escala
+    from server.src.biomechanics.simetria import calcular_simetria
+    from server.src.models.metrica import Metrica
+
+    fator: float | None = None
+    if altura_cm is not None and altura_cm > 0:
+        try:
+            fator = calcular_fator_escala(frames, altura_cm).fator_escala
+        except ValueError:
+            fator = None
+
+    resultado = calcular_simetria(frames, fps, fator)
+    if resultado.simetria_tcs is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="simetria_tcs",
+                valor=resultado.simetria_tcs,
+                unidade="%",
+                apenas_informativa=False,
+            )
+        )
+    if resultado.simetria_joelho is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="simetria_joelho",
+                valor=resultado.simetria_joelho,
+                unidade="%",
+                apenas_informativa=False,
+            )
+        )
+    if resultado.simetria_oscilacao is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="simetria_oscilacao",
+                valor=resultado.simetria_oscilacao,
+                unidade="%",
+                apenas_informativa=False,
             )
         )
     session.commit()
