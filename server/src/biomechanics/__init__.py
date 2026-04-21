@@ -44,6 +44,11 @@ from server.src.biomechanics.overstriding import (
     OverstridingResultado,
     calcular_overstriding,
 )
+from server.src.biomechanics.tcs import (
+    TcsLado,
+    TcsResultado,
+    calcular_tcs,
+)
 from server.src.biomechanics.tronco import (
     FLEXAO_APOIO_MEDIO_MAX_GRAUS,
     FLEXAO_APOIO_MEDIO_MIN_GRAUS,
@@ -79,10 +84,13 @@ __all__ = [
     "InclinacaoTronco",
     "OverstridingLado",
     "OverstridingResultado",
+    "TcsLado",
+    "TcsResultado",
     "calcular_angulo_cotovelo",
     "calcular_angulo_joelho_contato_inicial",
     "calcular_cadencia",
     "calcular_fator_escala",
     "calcular_inclinacao_tronco",
     "calcular_overstriding",
+    "calcular_tcs",
 ]

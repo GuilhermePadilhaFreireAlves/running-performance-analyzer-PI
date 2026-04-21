@@ -466,6 +466,7 @@ def run_pipeline(
             sessao.usuario.altura_cm if sessao.usuario is not None else None
         )
         _persistir_overstriding(session, sessao_id, result.frames, altura_cm)
+        _persistir_tcs(session, sessao_id, result.frames, result.fps)
     finally:
         session.close()
         if delete_video:
@@ -657,6 +658,49 @@ def _persistir_overstriding(
                 valor=resultado.direito.overstriding_medio_cm,
                 unidade="cm",
                 apenas_informativa=False,
+            )
+        )
+    session.commit()
+
+
+def _persistir_tcs(
+    session: Session,
+    sessao_id: int,
+    frames: list[FrameKeypoints],
+    fps: float,
+) -> None:
+    """Calcula e grava em METRICA o TCS (ms) esq/dir do corredor.
+
+    US-013: marcada como ``apenas_informativa=True`` — o valor absoluto de
+    TCS varia com o pace e, conforme o PRD, não deve penalizar a nota
+    geral (apenas a simetria penaliza). No-op silencioso para ``fps <= 0``
+    ou para o lado sem ciclos de contato detectados. Não altera o status
+    da sessão — a transição para ``concluido`` pertence a US-016.
+    """
+    from server.src.biomechanics.tcs import calcular_tcs
+    from server.src.models.metrica import Metrica
+
+    if fps <= 0:
+        return
+    resultado = calcular_tcs(frames, fps)
+    if resultado.esquerdo is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="tcs_esq",
+                valor=resultado.esquerdo.tcs_medio_ms,
+                unidade="ms",
+                apenas_informativa=True,
+            )
+        )
+    if resultado.direito is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="tcs_dir",
+                valor=resultado.direito.tcs_medio_ms,
+                unidade="ms",
+                apenas_informativa=True,
             )
         )
     session.commit()
