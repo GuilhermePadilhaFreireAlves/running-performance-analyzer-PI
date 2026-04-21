@@ -457,10 +457,50 @@ def run_pipeline(
             result.fps,
             total,
         )
+
+        _persistir_angulos_joelho(session, sessao_id, result.frames)
     finally:
         session.close()
         if delete_video:
             _safe_unlink(video_path)
+
+
+def _persistir_angulos_joelho(
+    session: Session, sessao_id: int, frames: list[FrameKeypoints]
+) -> None:
+    """Calcula e grava em METRICA o ângulo do joelho esq/dir no contato inicial.
+
+    US-008: não grava o lado cujo cálculo não produz valor (nenhum ciclo
+    com keypoints válidos). Não altera o status da sessão — a transição
+    para `concluido` é responsabilidade de US-016 (gerador de recomendações).
+    """
+    from server.src.biomechanics.joelho import (
+        calcular_angulo_joelho_contato_inicial,
+    )
+    from server.src.models.metrica import Metrica
+
+    resultado = calcular_angulo_joelho_contato_inicial(frames)
+    if resultado.esquerdo is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="angulo_joelho_esq",
+                valor=resultado.esquerdo.angulo_medio_graus,
+                unidade="graus",
+                apenas_informativa=False,
+            )
+        )
+    if resultado.direito is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="angulo_joelho_dir",
+                valor=resultado.direito.angulo_medio_graus,
+                unidade="graus",
+                apenas_informativa=False,
+            )
+        )
+    session.commit()
 
 
 def _safe_unlink(path: str) -> None:
