@@ -20,6 +20,10 @@ Started: Sun Apr 19 15:32:14 PDT 2026
 - Multipart form uploads need `python-multipart` (in `requirements.txt`). Use `Annotated[float, Form()]` / `Annotated[UploadFile, File()]` on endpoint params; persist to `UPLOAD_DIR` (env var, default `./uploads/`, gitignored) and call `_cleanup(path)` on any validation failure before re-raising `HTTPException`.
 - Dispatch long-running work with `background_tasks: BackgroundTasks` parameter (FastAPI built-in) + `background_tasks.add_task(fn, ...)`; tasks run after the response is sent so the client is not blocked. The pipeline entrypoint convention is `server.src.video_pipeline.run_pipeline(sessao_id, video_path)`.
 - Enforce per-user access on resource routes by loading the row (`session.get(Model, id)`) then: `None → 404`, `row.usuario_id != user.id → 403`. Do not leak existence by collapsing to 404 for both — the tests (and PRD) require a distinct 403.
+- Background pipeline runs **outside** FastAPI's dependency-injection scope, so `app.dependency_overrides` does not affect it. `server.src.video_pipeline.run_pipeline` takes optional `extractor` (`PoseExtractor` protocol) and `session_factory` kwargs — injection points for tests. The HTTP call site keeps the positional signature `run_pipeline(sessao_id, video_path)`.
+- Heavy-pipeline protocols follow the same lazy pattern as `VideoValidator`: `cv2`/`ultralytics` imports live inside method bodies, never at module top, so `import server.src.video_pipeline` never loads YOLO.
+- COCO keypoint filtering: `KEYPOINT_SCORE_THRESHOLD = 0.5` — below that, set keypoint to `None` (treated as NaN downstream). A frame is "low quality" when ≥ `LOW_QUALITY_KP_THRESHOLD` (= 9, majority of 17) of its keypoints are None. Reuse these constants from `video_pipeline` for any downstream biomechanics code.
+- `smooth_frames(frames, window=5)` applies a moving-average on x,y per keypoint, **preserving None** — it never interpolates over a dropped frame. Any new keypoint-consuming story should accept the smoothed series (post-suavização) as input, not raw extractor output.
 
 ---
 
@@ -83,4 +87,17 @@ Started: Sun Apr 19 15:32:14 PDT 2026
   - New response schemas go in `server/src/schemas/<entity>.py` next to the existing ones (e.g. `VideoStatusResponse` lives alongside `VideoUploadResponse`). Keep them as `BaseModel` subclasses — FastAPI serialises them via `response_model=...` on the route.
   - Reuse the `STATUS_DESCRICAO` dict in future client-facing endpoints (e.g. simple/raw analysis, histórico) instead of redefining the mapping — it's the single source of truth for `sessao.status → PRD label`.
   - `session.get(Model, pk)` (SQLAlchemy 2.0) is preferred over `session.query(...).get(...)` for primary-key lookups in routers; returns `None` cleanly without raising.
+---
+
+## [2026-04-21 13:30] - US-006 Pipeline de detecção de pose YOLOv8-pose com suavização e invalidações
+- Implemented real `run_pipeline(sessao_id, video_path)` in `server/src/video_pipeline.py`: drives status `pendente → detectando_pose → calculando_metricas` (or `erro_qualidade_keypoints` / `erro_multiplas_pessoas`), persists `fps` on the session, deletes the uploaded video file at end, never persists METRICA/RECOMENDACAO on error paths.
+- Added `PoseExtractor` protocol + `DefaultPoseExtractor` (lazy `cv2`/`ultralytics`), `FrameKeypoints` / `PoseExtractionResult` dataclasses, `smooth_frames` (moving average, window=5, preserves None for sub-threshold keypoints), and `_predict_frame_keypoints` that filters keypoints with score `< 0.5`. Quality gate: > 50% of frames being "low quality" (≥ 9/17 invalid keypoints) → `erro_qualidade_keypoints`. Multi-person gate: > 30% of frames with `person_count > 1` → `erro_multiplas_pessoas`.
+- Added `fps` column to `SessaoAnalise` + Alembic migration `0002_sessao_analise_add_fps`. Smoke-tested 5 scenarios (success / low-q / multi-person / extractor-raises / smoothing math) end-to-end against in-memory SQLite. Migration applies cleanly on a fresh DB; mypy clean (22 source files); uvicorn boots.
+- Files: `server/src/video_pipeline.py`, `server/src/models/sessao_analise.py`, `server/alembic/versions/0002_sessao_analise_add_fps.py`, `server/CLAUDE.md`.
+- **Learnings for future iterations:**
+  - `run_pipeline` is the single in-memory chain — keypoints flow between stages as a `list[FrameKeypoints]` after `smooth_frames(...)`. Future stories (US-008, US-011, US-012, …) should extend this function in place; do **not** persist keypoints between calls.
+  - Video file is deleted at the end of `run_pipeline` (success or error). Only the keypoints (in memory for that invocation) survive — design downstream stages around this.
+  - The status `calculando_metricas` is the "exit" state of US-006 success; subsequent metric-calculating stories must transition the session from `calculando_metricas → concluido` once their work persists METRICA / RECOMENDACAO rows.
+  - `_default_pose_extractor` and `_default_validator` are module-level singletons. To override in tests, either pass `extractor=` kwarg to `run_pipeline` or rebind the module attribute (no FastAPI override hook exists for background tasks).
+  - `LOW_QUALITY_KP_THRESHOLD` is `NUM_KEYPOINTS // 2 + 1 = 9` (strict majority of 17); change `NUM_KEYPOINTS` only if the pose model changes — not if you want to tune the gate.
 ---
