@@ -1,1 +1,32 @@
-venv
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Modelos YOLO (baixar localmente — não versionar pesos)
+*.pt
+
+# Entradas de vídeo / saídas de análise locais
+run/
+grafico_*.png
+
+# Banco local de desenvolvimento (SQLite default)
+server_dev.db
+*.sqlite
+*.sqlite3
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Ralph — arquivos de estado local (mantém prd.json, ralph.sh, CLAUDE.md, progress.txt versionados)
+ralph/.last-branch
+ralph/archive/
