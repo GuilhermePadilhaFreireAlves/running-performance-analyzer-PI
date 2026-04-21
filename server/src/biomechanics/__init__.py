@@ -39,6 +39,10 @@ from server.src.biomechanics.joelho import (
     AnguloJoelhoLado,
     calcular_angulo_joelho_contato_inicial,
 )
+from server.src.biomechanics.oscilacao import (
+    OscilacaoVertical,
+    calcular_oscilacao_vertical,
+)
 from server.src.biomechanics.overstriding import (
     OverstridingLado,
     OverstridingResultado,
@@ -82,6 +86,7 @@ __all__ = [
     "Cadencia",
     "FatorEscala",
     "InclinacaoTronco",
+    "OscilacaoVertical",
     "OverstridingLado",
     "OverstridingResultado",
     "TcsLado",
@@ -91,6 +96,7 @@ __all__ = [
     "calcular_cadencia",
     "calcular_fator_escala",
     "calcular_inclinacao_tronco",
+    "calcular_oscilacao_vertical",
     "calcular_overstriding",
     "calcular_tcs",
 ]

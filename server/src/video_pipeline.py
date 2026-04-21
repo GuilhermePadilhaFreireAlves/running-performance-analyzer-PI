@@ -466,6 +466,9 @@ def run_pipeline(
             sessao.usuario.altura_cm if sessao.usuario is not None else None
         )
         _persistir_overstriding(session, sessao_id, result.frames, altura_cm)
+        _persistir_oscilacao_vertical(
+            session, sessao_id, result.frames, altura_cm
+        )
         _persistir_tcs(session, sessao_id, result.frames, result.fps)
     finally:
         session.close()
@@ -660,6 +663,48 @@ def _persistir_overstriding(
                 apenas_informativa=False,
             )
         )
+    session.commit()
+
+
+def _persistir_oscilacao_vertical(
+    session: Session,
+    sessao_id: int,
+    frames: list[FrameKeypoints],
+    altura_cm: float | None,
+) -> None:
+    """Calcula e grava em METRICA a oscilação vertical do CoM (cm).
+
+    US-014: ΔY do quadril médio (Y_CoM) por ciclo de passada (entre dois
+    contatos consecutivos do pé direito), convertido para cm via
+    ``fator_escala`` do usuário (US-007). O `altura_cm` (`Usuario.altura_cm`)
+    já é `NOT NULL` no modelo; o guard defensivo evita falhar o pipeline
+    caso a coluna chegue como `None` (testes, dados legados). Em qualquer
+    falha do fator (altura ausente ou nenhum frame válido para altura em
+    pixels) o passo é silencioso. Não altera o status da sessão — a
+    transição para ``concluido`` é responsabilidade de US-016.
+    """
+    from server.src.biomechanics.escala import calcular_fator_escala
+    from server.src.biomechanics.oscilacao import calcular_oscilacao_vertical
+    from server.src.models.metrica import Metrica
+
+    if altura_cm is None or altura_cm <= 0:
+        return
+    try:
+        fator = calcular_fator_escala(frames, altura_cm).fator_escala
+    except ValueError:
+        return
+    resultado = calcular_oscilacao_vertical(frames, fator)
+    if resultado is None:
+        return
+    session.add(
+        Metrica(
+            sessao_id=sessao_id,
+            tipo="oscilacao_vertical",
+            valor=resultado.oscilacao_media_cm,
+            unidade="cm",
+            apenas_informativa=False,
+        )
+    )
     session.commit()
 
 
