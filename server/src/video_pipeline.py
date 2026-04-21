@@ -458,6 +458,7 @@ def run_pipeline(
             total,
         )
 
+        _persistir_dados_brutos(session, sessao_id, result.frames)
         _persistir_angulos_joelho(session, sessao_id, result.frames)
         _persistir_angulos_cotovelo(session, sessao_id, result.frames)
         _persistir_cadencia(session, sessao_id, result.frames, result.fps)
@@ -478,6 +479,55 @@ def run_pipeline(
         session.close()
         if delete_video:
             _safe_unlink(video_path)
+
+
+def _persistir_dados_brutos(
+    session: Session, sessao_id: int, frames: list[FrameKeypoints]
+) -> None:
+    """Serializa a série frame-a-frame (keypoints + métricas per-frame) como JSON.
+
+    US-018: o endpoint ``/api/analysis/{id}/raw`` consome esta serialização
+    direto de ``SessaoAnalise.dados_brutos_json``. Para cada frame, grava
+    os 17 keypoints COCO (``[x, y, score]`` ou ``null``) e as métricas
+    per-frame: ângulos de joelho/cotovelo esq/dir, inclinação do tronco
+    e Y do centro de massa. Valores ausentes são serializados como ``null``
+    (nunca ``NaN``) para JSON puro. Não altera o status da sessão.
+    """
+    import json
+
+    from server.src.biomechanics.frame_metrics import (
+        angulo_cotovelo_frame,
+        angulo_joelho_frame,
+        inclinacao_tronco_frame,
+        y_com_frame,
+    )
+
+    payload_frames: list[dict[str, object]] = []
+    for frame in frames:
+        keypoints_serializados: list[list[float] | None] = []
+        for kp in frame.keypoints:
+            if kp is None:
+                keypoints_serializados.append(None)
+            else:
+                keypoints_serializados.append([kp[0], kp[1], kp[2]])
+        payload_frames.append(
+            {
+                "frame_idx": frame.frame_idx,
+                "keypoints": keypoints_serializados,
+                "angulo_joelho_esq": angulo_joelho_frame(frame, "esq"),
+                "angulo_joelho_dir": angulo_joelho_frame(frame, "dir"),
+                "angulo_cotovelo_esq": angulo_cotovelo_frame(frame, "esq"),
+                "angulo_cotovelo_dir": angulo_cotovelo_frame(frame, "dir"),
+                "inclinacao_tronco": inclinacao_tronco_frame(frame),
+                "y_com": y_com_frame(frame),
+            }
+        )
+
+    sessao = session.get(SessaoAnalise, sessao_id)
+    if sessao is None:
+        return
+    sessao.dados_brutos_json = json.dumps(payload_frames, allow_nan=False)
+    session.commit()
 
 
 def _persistir_angulos_joelho(

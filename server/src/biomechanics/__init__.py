@@ -21,6 +21,12 @@ from server.src.biomechanics.cotovelo import (
     AnguloCotoveloResultado,
     calcular_angulo_cotovelo,
 )
+from server.src.biomechanics.frame_metrics import (
+    angulo_cotovelo_frame,
+    angulo_joelho_frame,
+    inclinacao_tronco_frame,
+    y_com_frame,
+)
 from server.src.biomechanics.escala import (
     KP_NARIZ,
     KP_TORNOZELO_DIR,
@@ -120,6 +126,8 @@ __all__ = [
     "TcsLado",
     "TcsResultado",
     "analisar_metricas",
+    "angulo_cotovelo_frame",
+    "angulo_joelho_frame",
     "calcular_angulo_cotovelo",
     "calcular_angulo_joelho_contato_inicial",
     "calcular_cadencia",
@@ -130,5 +138,7 @@ __all__ = [
     "calcular_overstriding",
     "calcular_simetria",
     "calcular_tcs",
+    "inclinacao_tronco_frame",
     "indice_simetria",
+    "y_com_frame",
 ]
