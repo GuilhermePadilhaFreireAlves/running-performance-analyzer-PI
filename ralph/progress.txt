@@ -19,6 +19,7 @@ Started: Sun Apr 19 15:32:14 PDT 2026
 - Heavy ML deps (`cv2`, `ultralytics`) are isolated in `server/src/video_pipeline.py` behind the `VideoValidator` protocol; `get_video_validator()` is the FastAPI dependency, overridable in tests. Lazy-import `cv2`/`ultralytics` inside methods so importing the module never loads YOLO. `mypy.ini` has `ignore_missing_imports = True` for `cv2.*`, `ultralytics.*`, `numpy.*`.
 - Multipart form uploads need `python-multipart` (in `requirements.txt`). Use `Annotated[float, Form()]` / `Annotated[UploadFile, File()]` on endpoint params; persist to `UPLOAD_DIR` (env var, default `./uploads/`, gitignored) and call `_cleanup(path)` on any validation failure before re-raising `HTTPException`.
 - Dispatch long-running work with `background_tasks: BackgroundTasks` parameter (FastAPI built-in) + `background_tasks.add_task(fn, ...)`; tasks run after the response is sent so the client is not blocked. The pipeline entrypoint convention is `server.src.video_pipeline.run_pipeline(sessao_id, video_path)`.
+- Enforce per-user access on resource routes by loading the row (`session.get(Model, id)`) then: `None → 404`, `row.usuario_id != user.id → 403`. Do not leak existence by collapsing to 404 for both — the tests (and PRD) require a distinct 403.
 
 ---
 
@@ -71,4 +72,15 @@ Started: Sun Apr 19 15:32:14 PDT 2026
   - YOLO model path comes from `YOLO_POSE_MODEL` env var (default `yolo26x-pose.pt`). The default validator returns `False` for `is_lateral` when the model weight file is missing — production must ensure `yolo26x-pose.pt` is present in CWD or `YOLO_POSE_MODEL`.
   - When raising 422/perspective errors, clean up the persisted upload first (`_cleanup(saved_path)` in `server/src/routers/videos.py`) — otherwise failed uploads accumulate in `UPLOAD_DIR`.
   - Pydantic Form-only endpoints cannot use a `BaseModel` body; each form field must be its own `Annotated[..., Form()]` parameter.
+---
+
+## [2026-04-21 12:30] - US-005 Endpoint de status do processamento
+- Added `GET /api/videos/{video_id}/status` returning `{video_id, status, status_descricao}`; internal status is mapped to the PRD-facing label via `STATUS_DESCRICAO` dict in `server/src/routers/videos.py` (e.g. `detectando_pose → "Detectando pose com YOLOv8"`, `concluido → "Concluído"`). `pendente` collapses to `"Validando perspectiva"` since the background pipeline begins there.
+- Ownership enforcement: `session.get(SessaoAnalise, id)` → 404 when missing, 403 when `usuario_id != user.id`. Auth reuses `CurrentUser`; missing/invalid tokens still return 401 with uniform body.
+- Verified end-to-end with `TestClient` + in-memory SQLite (StaticPool): 401 no-auth, 401 garbage token, 200 + descriptive label for `pendente`/`detectando_pose`/`concluido`/`erro_multiplas_pessoas`, 403 other-user session, 404 nonexistent id. Mypy clean (21 files); uvicorn boots.
+- Files: `server/src/routers/videos.py`, `server/src/schemas/video.py`.
+- **Learnings for future iterations:**
+  - New response schemas go in `server/src/schemas/<entity>.py` next to the existing ones (e.g. `VideoStatusResponse` lives alongside `VideoUploadResponse`). Keep them as `BaseModel` subclasses — FastAPI serialises them via `response_model=...` on the route.
+  - Reuse the `STATUS_DESCRICAO` dict in future client-facing endpoints (e.g. simple/raw analysis, histórico) instead of redefining the mapping — it's the single source of truth for `sessao.status → PRD label`.
+  - `session.get(Model, pk)` (SQLAlchemy 2.0) is preferred over `session.query(...).get(...)` for primary-key lookups in routers; returns `None` cleanly without raising.
 ---
