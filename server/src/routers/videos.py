@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from server.src.auth import CurrentUser
 from server.src.database import get_session
 from server.src.models.sessao_analise import SessaoAnalise
-from server.src.schemas.video import VideoUploadResponse
+from server.src.schemas.video import VideoStatusResponse, VideoUploadResponse
 from server.src.video_pipeline import (
     FPS_MINIMO,
     MSG_FPS_INSUFICIENTE,
@@ -32,6 +32,16 @@ from server.src.video_pipeline import (
     is_pace_valido,
     run_pipeline,
 )
+
+STATUS_DESCRICAO: dict[str, str] = {
+    "pendente": "Validando perspectiva",
+    "validando_perspectiva": "Validando perspectiva",
+    "detectando_pose": "Detectando pose com YOLOv8",
+    "calculando_metricas": "Calculando métricas",
+    "concluido": "Concluído",
+    "erro_qualidade_keypoints": "Erro: qualidade de keypoints insuficiente",
+    "erro_multiplas_pessoas": "Erro: múltiplas pessoas detectadas",
+}
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
@@ -112,3 +122,33 @@ def upload_video(
     background_tasks.add_task(run_pipeline, sessao.id, str(saved_path))
 
     return VideoUploadResponse(video_id=sessao.id, status=sessao.status)
+
+
+@router.get(
+    "/{video_id}/status",
+    response_model=VideoStatusResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_video_status(
+    video_id: int,
+    user: CurrentUser,
+    session: SessionDep,
+) -> VideoStatusResponse:
+    sessao = session.get(SessaoAnalise, video_id)
+    if sessao is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sessão de análise não encontrada",
+        )
+    if sessao.usuario_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado a esta sessão de análise",
+        )
+
+    descricao = STATUS_DESCRICAO.get(sessao.status, sessao.status)
+    return VideoStatusResponse(
+        video_id=sessao.id,
+        status=sessao.status,
+        status_descricao=descricao,
+    )
