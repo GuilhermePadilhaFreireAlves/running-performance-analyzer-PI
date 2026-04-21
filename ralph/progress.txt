@@ -30,6 +30,7 @@ Started: Sun Apr 19 15:32:14 PDT 2026
 - Métricas calculadas por `run_pipeline` são gravadas em `METRICA` via funções privadas `_persistir_<metric>(session, sessao_id, frames)` (lazy-import do módulo `biomechanics` + `Metrica` dentro da função para manter `video_pipeline` leve). Não alteram `sessao.status` — a transição final para `concluido` pertence a US-016 (gerador de recomendações).
 - Convenção de ângulo do joelho no **backend** (US-008+) é o ângulo interno (perna estendida = 180°), diferente da convenção `180-internal` do legado em `processing/src/mainGraph.py`. Ao tocar qualquer módulo biomecânico novo, mantenha a convenção interna (arccos do produto escalar normalizado).
 - Detecção de contato inicial: picos locais estritos de Y do tornozelo (helper privado em `biomechanics/joelho.py`). Bordas nunca são pico. Reutilize esta ideia para US-010 (cadência) e US-013 (TCS).
+- Métricas por-lado **sem ciclos** (ângulo médio de cotovelo, etc.) usam o shape `AnguloXxxLado(angulo_medio_graus, frames_validos)` — campo `frames_validos: int` em vez de `frames_contato: tuple[int, ...]`. Reserve `frames_contato` para métricas de ciclo (joelho no contato, TCS, overstriding).
 
 ---
 
@@ -129,4 +130,16 @@ Started: Sun Apr 19 15:32:14 PDT 2026
   - Para picos de tornozelo, o módulo usa comparação estrita (`cur > prev and cur > nxt`) e ignora bordas (índices 0 e n-1). Uma pequena diferença entre pico e vizinhos já basta. Em sintéticos, use deltas ≥ 1 px para evitar igualdade numérica.
   - Lembre-se de proteger `arccos` com `cos_theta = max(-1, min(1, cos_theta))` — ponto flutuante às vezes empurra o valor para fora de [-1,1] em configurações colineares (180°) ou dobradas (0°). Já feito em `joelho._angulo_interno` — reutilize o padrão.
   - Histórias que gravam em `METRICA` devem usar `_persistir_<metric>` isolado, com lazy-import do módulo biomecânico e do `Metrica` ORM, mantendo o corpo de `run_pipeline` legível.
+---
+
+## [2026-04-21 11:57] - US-009 Cálculo de ângulo do cotovelo (esq/dir) — média ao longo dos ciclos
+- Novo módulo `server/src/biomechanics/cotovelo.py` com `calcular_angulo_cotovelo(frames)` retornando `AnguloCotoveloResultado(esquerdo, direito)`. Ângulo interno via `arccos` do produto escalar normalizado entre `cotovelo→ombro` (KP 5/6→7/8) e `cotovelo→pulso` (KP 9/10→7/8); média sobre **todos** os frames com os três keypoints válidos (não há detecção de ciclo — diferente de US-008).
+- `run_pipeline` agora chama `_persistir_angulos_cotovelo` após `_persistir_angulos_joelho`, gravando `Metrica(tipo='angulo_cotovelo_esq'|'angulo_cotovelo_dir', valor=..., unidade='graus', apenas_informativa=False)` apenas quando o cálculo produz valor no lado em questão. Não altera status da sessão (US-016 fecha).
+- 8 testes pytest em `server/tests/test_cotovelo.py`: 90°, 120° construído geometricamente, 180° (braço estendido), média sobre múltiplos frames, frames parcialmente válidos (ignorados), nenhum frame válido (None/None), esq e dir independentes, lista vazia. Mypy limpo (30 arquivos); pytest 24/24 passing; uvicorn sobe sem erro.
+- Files: `server/src/biomechanics/cotovelo.py` (novo), `server/src/biomechanics/__init__.py` (re-export), `server/src/video_pipeline.py` (helper `_persistir_angulos_cotovelo`), `server/tests/test_cotovelo.py` (novo).
+- **Learnings for future iterations:**
+  - Métricas **médias sobre todos os frames** (cotovelo, tronco em apoio médio, oscilação) têm shape `AnguloXxxLado(angulo_medio_graus, frames_validos)` — `frames_validos: int`. Reserve `frames_contato: tuple[int, ...]` apenas para métricas de ciclo (joelho no contato, TCS, overstriding).
+  - O helper `_angulo_interno(a, b, c)` aparece tanto em `joelho.py` quanto em `cotovelo.py` — duplicação intencional por enquanto, já que cada módulo mantém seus próprios índices COCO. Se surgir uma terceira cópia (tronco, etc.), valerá a pena extrair para `biomechanics/_angulos.py`.
+  - O módulo de cotovelo **não detecta ciclos** — ele só itera frame a frame e média. Não tente forçar picos aqui: o PRD pede média simples ("sobre todos os frames válidos do vídeo").
+  - Convenção mantida: braço estendido = 180°, flexão máxima → 0°. Diferente de `processing/src/mainGraph.py` (convenção `180 - internal`); backend usa interna direta.
 ---
