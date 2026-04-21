@@ -462,6 +462,10 @@ def run_pipeline(
         _persistir_angulos_cotovelo(session, sessao_id, result.frames)
         _persistir_cadencia(session, sessao_id, result.frames, result.fps)
         _persistir_inclinacao_tronco(session, sessao_id, result.frames)
+        altura_cm = (
+            sessao.usuario.altura_cm if sessao.usuario is not None else None
+        )
+        _persistir_overstriding(session, sessao_id, result.frames, altura_cm)
     finally:
         session.close()
         if delete_video:
@@ -603,6 +607,58 @@ def _persistir_inclinacao_tronco(
             apenas_informativa=False,
         )
     )
+    session.commit()
+
+
+def _persistir_overstriding(
+    session: Session,
+    sessao_id: int,
+    frames: list[FrameKeypoints],
+    altura_cm: float | None,
+) -> None:
+    """Calcula e grava em METRICA o overstriding (cm) esq/dir no contato inicial.
+
+    US-012: converte `overstriding_px = tornozelo_X - CoM_X` para cm via
+    `fator_escala` do usuário (US-007). `altura_cm` é a altura cadastrada
+    do corredor (`Usuario.altura_cm`) e já é `NOT NULL` no modelo; o guard
+    defensivo evita falhar o pipeline caso a coluna chegue aqui como `None`
+    (testes, dados legados). Em qualquer falha do fator de escala
+    (altura ausente ou nenhum frame válido para a altura em pixels) o passo
+    é silencioso — o pipeline segue sem persistir overstriding. Não altera o
+    status da sessão — transição para `concluido` é responsabilidade de
+    US-016.
+    """
+    from server.src.biomechanics.escala import calcular_fator_escala
+    from server.src.biomechanics.overstriding import calcular_overstriding
+    from server.src.models.metrica import Metrica
+
+    if altura_cm is None or altura_cm <= 0:
+        return
+    try:
+        fator = calcular_fator_escala(frames, altura_cm).fator_escala
+    except ValueError:
+        return
+    resultado = calcular_overstriding(frames, fator)
+    if resultado.esquerdo is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="overstriding_esq",
+                valor=resultado.esquerdo.overstriding_medio_cm,
+                unidade="cm",
+                apenas_informativa=False,
+            )
+        )
+    if resultado.direito is not None:
+        session.add(
+            Metrica(
+                sessao_id=sessao_id,
+                tipo="overstriding_dir",
+                valor=resultado.direito.overstriding_medio_cm,
+                unidade="cm",
+                apenas_informativa=False,
+            )
+        )
     session.commit()
 
 
