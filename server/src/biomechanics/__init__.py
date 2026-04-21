@@ -39,8 +39,16 @@ from server.src.biomechanics.joelho import (
     AnguloJoelhoLado,
     calcular_angulo_joelho_contato_inicial,
 )
+from server.src.biomechanics.tronco import (
+    FLEXAO_APOIO_MEDIO_MAX_GRAUS,
+    FLEXAO_APOIO_MEDIO_MIN_GRAUS,
+    InclinacaoTronco,
+    calcular_inclinacao_tronco,
+)
 
 __all__ = [
+    "FLEXAO_APOIO_MEDIO_MAX_GRAUS",
+    "FLEXAO_APOIO_MEDIO_MIN_GRAUS",
     "KP_COTOVELO_DIR",
     "KP_COTOVELO_ESQ",
     "KP_JOELHO_DIR",
@@ -63,8 +71,10 @@ __all__ = [
     "AnguloJoelhoLado",
     "Cadencia",
     "FatorEscala",
+    "InclinacaoTronco",
     "calcular_angulo_cotovelo",
     "calcular_angulo_joelho_contato_inicial",
     "calcular_cadencia",
     "calcular_fator_escala",
+    "calcular_inclinacao_tronco",
 ]

@@ -461,6 +461,7 @@ def run_pipeline(
         _persistir_angulos_joelho(session, sessao_id, result.frames)
         _persistir_angulos_cotovelo(session, sessao_id, result.frames)
         _persistir_cadencia(session, sessao_id, result.frames, result.fps)
+        _persistir_inclinacao_tronco(session, sessao_id, result.frames)
     finally:
         session.close()
         if delete_video:
@@ -572,6 +573,34 @@ def _persistir_cadencia(
             valor=resultado.cadencia_spm,
             unidade="spm",
             apenas_informativa=True,
+        )
+    )
+    session.commit()
+
+
+def _persistir_inclinacao_tronco(
+    session: Session, sessao_id: int, frames: list[FrameKeypoints]
+) -> None:
+    """Calcula e grava em METRICA a inclinação anterior do tronco.
+
+    US-011: média sobre frames em fase de apoio médio (algum joelho com
+    flexão em [40°, 45°]). Não grava nada quando não há frames qualificados.
+    Não altera o status da sessão — a transição para `concluido` é
+    responsabilidade de US-016.
+    """
+    from server.src.biomechanics.tronco import calcular_inclinacao_tronco
+    from server.src.models.metrica import Metrica
+
+    resultado = calcular_inclinacao_tronco(frames)
+    if resultado is None:
+        return
+    session.add(
+        Metrica(
+            sessao_id=sessao_id,
+            tipo="inclinacao_tronco",
+            valor=resultado.inclinacao_media_graus,
+            unidade="graus",
+            apenas_informativa=False,
         )
     )
     session.commit()
