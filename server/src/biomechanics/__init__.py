@@ -14,13 +14,29 @@ from server.src.biomechanics.escala import (
     FatorEscala,
     calcular_fator_escala,
 )
+from server.src.biomechanics.joelho import (
+    KP_JOELHO_DIR,
+    KP_JOELHO_ESQ,
+    KP_QUADRIL_DIR,
+    KP_QUADRIL_ESQ,
+    AnguloJoelhoContatoInicial,
+    AnguloJoelhoLado,
+    calcular_angulo_joelho_contato_inicial,
+)
 
 __all__ = [
+    "KP_JOELHO_DIR",
+    "KP_JOELHO_ESQ",
     "KP_NARIZ",
+    "KP_QUADRIL_DIR",
+    "KP_QUADRIL_ESQ",
     "KP_TORNOZELO_DIR",
     "KP_TORNOZELO_ESQ",
     "MSG_ALTURA_AUSENTE",
     "MSG_SEM_FRAMES_VALIDOS",
+    "AnguloJoelhoContatoInicial",
+    "AnguloJoelhoLado",
     "FatorEscala",
+    "calcular_angulo_joelho_contato_inicial",
     "calcular_fator_escala",
 ]
