@@ -1,0 +1,74 @@
+# Ralph Progress Log
+Started: Sun Apr 19 15:32:14 PDT 2026
+
+## Codebase Patterns
+- SQLAlchemy 2.0 declarative base lives at `server/src/database.py` (`Base`, `engine`, `SessionLocal`, `get_database_url`). All models import `Base` from there.
+- ORM models live at `server/src/models/<name>.py`; `server/src/models/__init__.py` is the single import point and re-exports `Base` plus every model so Alembic's `env.py` can register metadata via one import.
+- Alembic is configured at `server/alembic.ini` with `prepend_sys_path = %(here)s/..` so migrations always run from repo root: `alembic -c server/alembic.ini upgrade head`.
+- `env.py` pulls the DB URL from `DATABASE_URL` env var (default `sqlite:///./server_dev.db`) and sets `render_as_batch=True` for SQLite so schema changes remain portable.
+- Absolute imports (`from server.src.<pkg>`) are mandatory — requires `server/__init__.py` + `server/src/__init__.py` present. Relative `from src...` breaks mypy's dual-namespace check.
+- Enum-like fields use VARCHAR + `CheckConstraint("col IN (...)")` for Postgres/SQLite portability, and values are re-exported as a module-level tuple (e.g. `SESSAO_STATUS_VALUES`) for reuse in API layers.
+- Mypy config at repo root `mypy.ini` covers `server/src` + `server/alembic` with strict-ish defaults (`disallow_untyped_defs = True`). Run `mypy` from repo root.
+- FastAPI app object is at `server/src/main.py:app`; boot with `uvicorn server.src.main:app --reload` from repo root.
+- Pydantic v2 schemas live at `server/src/schemas/<entity>.py`. Use `EmailStr` (requires `email-validator`) for emails and `ConfigDict(from_attributes=True)` on response models so SQLAlchemy ORM rows convert via `Model.model_validate(orm_obj)`.
+- HTTP routers live at `server/src/routers/<name>.py` and are wired into `server/src/main.py` via `app.include_router(<module>.router)`. Use `APIRouter(prefix="/api/<resource>", tags=[...])`.
+- DB-bound endpoints inject the session with `SessionDep = Annotated[Session, Depends(get_session)]` — keeps mypy clean (no `Depends()` default-value type mismatch).
+- Password hashing helpers at `server/src/security.py` — `hash_password(senha)` / `verify_password(senha, senha_hash)` use bcrypt's `gensalt()`/`checkpw`. Always hash before persisting; never store plaintext.
+- Smoke-test FastAPI routers without spawning uvicorn: build a `TestClient(app)` over an in-memory SQLite engine and override `get_session` via `app.dependency_overrides`. In-memory SQLite **must** use `poolclass=StaticPool` + `connect_args={"check_same_thread": False}`, otherwise each connection sees an empty schema.
+- JWT auth: `server/src/security.py` has `create_access_token(subject)` / `decode_access_token(token)` using `HS256` + `SECRET_KEY` env var (dev default present). `server/src/auth.py` exposes `get_current_user` dependency and the `CurrentUser = Annotated[Usuario, Depends(get_current_user)]` alias — protect routes with `def route(user: CurrentUser, ...)`. The dependency uses `OAuth2PasswordBearer(auto_error=False)` so all 401 responses share a single uniform body (no leak of "missing token" vs "bad token").
+- Heavy ML deps (`cv2`, `ultralytics`) are isolated in `server/src/video_pipeline.py` behind the `VideoValidator` protocol; `get_video_validator()` is the FastAPI dependency, overridable in tests. Lazy-import `cv2`/`ultralytics` inside methods so importing the module never loads YOLO. `mypy.ini` has `ignore_missing_imports = True` for `cv2.*`, `ultralytics.*`, `numpy.*`.
+- Multipart form uploads need `python-multipart` (in `requirements.txt`). Use `Annotated[float, Form()]` / `Annotated[UploadFile, File()]` on endpoint params; persist to `UPLOAD_DIR` (env var, default `./uploads/`, gitignored) and call `_cleanup(path)` on any validation failure before re-raising `HTTPException`.
+- Dispatch long-running work with `background_tasks: BackgroundTasks` parameter (FastAPI built-in) + `background_tasks.add_task(fn, ...)`; tasks run after the response is sent so the client is not blocked. The pipeline entrypoint convention is `server.src.video_pipeline.run_pipeline(sessao_id, video_path)`.
+
+---
+
+## [2026-04-21 08:45] - US-001 Criar schema PostgreSQL e migrations
+- Added SQLAlchemy 2.0 models for `usuario`, `sessao_analise`, `metrica`, `recomendacao` with FK cascades and CHECK constraints for `status` and `severidade` enums.
+- Configured Alembic under `server/alembic/` with env.py that reads `DATABASE_URL` and loads `Base.metadata` from `server.src.models`. Authored the initial revision `0001_initial_schema`.
+- Installed and configured mypy (repo-root `mypy.ini`); typecheck passes over `server/src` and `server/alembic`. Migration executes cleanly against a fresh SQLite DB (verified: all four tables, unique index on `usuario.email`, FK ON DELETE CASCADE on `sessao_analise`, `metrica`, `recomendacao`).
+- Files: `server/__init__.py`, `server/src/__init__.py`, `server/src/database.py`, `server/src/main.py`, `server/src/models/{__init__,usuario,sessao_analise,metrica,recomendacao}.py`, `server/alembic.ini`, `server/alembic/env.py`, `server/alembic/versions/0001_initial_schema.py`, `mypy.ini`, `requirements.txt`, `.gitignore`.
+- **Learnings for future iterations:**
+  - Future stories that touch the DB layer should `from server.src.database import SessionLocal` for a session factory, or add a FastAPI dependency via `get_session` (already implemented as a generator).
+  - When adding new models, register them in `server/src/models/__init__.py` — otherwise Alembic won't include them in autogenerate/metadata.
+  - Generating a new migration: `alembic -c server/alembic.ini revision -m "<message>"` (use `--autogenerate` once a live DB is available). Keep manual migrations dialect-portable (use `sa.false()`/`sa.func.now()` over raw literals).
+  - SQLite requires `PRAGMA foreign_keys=ON` per connection to enforce FK constraints at runtime (schema is correct either way); set this in the engine for dev if FK enforcement matters in tests.
+  - `server/src/main.py:read_root` has been typed (`-> dict[str, str]`) because mypy's `disallow_untyped_defs` is now strict — future endpoints must declare return types.
+---
+
+## [2026-04-21 09:30] - US-002 Endpoint de cadastro de usuário com bcrypt
+- Added `POST /api/users/register` accepting `{ name, email, senha, altura_cm, peso_kg, nivel_experiencia }`, hashing the password with bcrypt and returning the public profile (no password fields).
+- Validation is enforced by Pydantic (`UsuarioCreate`): `EmailStr` rejects malformed emails, `altura_cm` is required and must be in `(0, 300]`. Duplicate email returns 409 (pre-check + `IntegrityError` rollback fallback) — never 500.
+- Verified all paths (200 happy/minimal, 409 duplicate, 422 missing altura/missing name/invalid email) with FastAPI `TestClient` against an in-memory SQLite (StaticPool). Mypy clean over `server/src` + `server/alembic`.
+- Files: `server/src/security.py` (new), `server/src/schemas/__init__.py` (new), `server/src/schemas/usuario.py` (new), `server/src/routers/__init__.py` (new), `server/src/routers/users.py` (new), `server/src/main.py` (wired router), `requirements.txt` (added `bcrypt`, `pydantic[email]`, `httpx`).
+- **Learnings for future iterations:**
+  - `EmailStr` validation requires the `email-validator` package — already in `pydantic[email]` extra in `requirements.txt`. Do not import it elsewhere.
+  - bcrypt 5.x ships its own backend; no need for `passlib`. The hash already encodes the salt, so no separate salt column is needed.
+  - When checking for existing rows before insert, still wrap the commit in a `try/except IntegrityError` + rollback to handle the race; both branches must return the same 409 detail string.
+  - The user model's `senha_hash` column is `String(255)` — bcrypt outputs ~60 chars so this is plenty, but don't shrink it.
+  - Future auth dependency (US-003) should live at `server/src/security.py` alongside `verify_password` / `hash_password`, or a new `server/src/auth.py` module.
+---
+
+## [2026-04-21 10:30] - US-003 Endpoint de login e sessão autenticada
+- Added `POST /api/auth/login` returning a JWT bearer token (`access_token` + `token_type`); password verified against bcrypt hash; invalid credentials and unknown email both return 401 with the same uniform `"Credenciais inválidas"` body so existence is not leaked.
+- Implemented JWT helpers in `server/src/security.py` (`create_access_token` / `decode_access_token`, HS256, 60-min TTL, `SECRET_KEY` env var) and the `get_current_user` dependency in `server/src/auth.py` plus the `CurrentUser` Annotated alias for protecting future routes.
+- Verified end-to-end with FastAPI `TestClient` over in-memory SQLite: happy login (200 + token), wrong password (401), unknown email (401, same body), malformed/missing fields (422), and the auth dependency (no header → 401, garbage token → 401, valid token → 200 returns the right user). Mypy clean (18 files); uvicorn boots and registers `/api/auth/login`.
+- Files: `server/src/security.py` (extended), `server/src/auth.py` (new), `server/src/schemas/auth.py` (new), `server/src/routers/auth.py` (new), `server/src/main.py` (wired router), `requirements.txt` (added `pyjwt`).
+- **Learnings for future iterations:**
+  - Protect any private route with `def route(user: CurrentUser, ...)` — `CurrentUser` is `Annotated[Usuario, Depends(get_current_user)]` exported from `server/src/auth.py`. The dependency already injects the DB session and rejects missing/expired/invalid tokens with a 401.
+  - Use `OAuth2PasswordBearer(auto_error=False)` (not `True`) so you can return your own uniform 401 body. With `auto_error=True`, FastAPI returns its own `{"detail": "Not authenticated"}` for the no-header case, which would diverge from the bad-token case and risk information leakage.
+  - PyJWT 2.12+ emits `InsecureKeyLengthWarning` when the HMAC key is < 32 bytes — keep the dev default `SECRET_KEY` ≥ 32 chars to keep test/CI logs clean.
+  - JWT subject is stored as `str(user_id)` in the `sub` claim; cast back to `int` in `get_current_user` and raise 401 on `ValueError` rather than 500.
+  - Token TTL = 60 min (`DEFAULT_TOKEN_TTL_MINUTES`); change via the `expires_minutes` arg to `create_access_token` if a future story needs short-lived/long-lived variants.
+---
+
+## [2026-04-21 11:30] - US-004 Endpoint de upload de vídeo com validações de backend e trigger assíncrono
+- Added `POST /api/videos/upload` (multipart: `file` + `pace_min_km`), auth-protected via `CurrentUser`. Validates pace 3.0–12.0, FPS ≥ 60, and lateral perspective (YOLOv8-pose shoulder/hip ratio < 0.30 median over 5 sampled frames) before creating `SessaoAnalise(status='pendente')` and dispatching `run_pipeline` as a `BackgroundTasks` job; returns `{video_id, status}`.
+- Heavy deps isolated in `server/src/video_pipeline.py` behind `VideoValidator` protocol + `get_video_validator` dependency — `cv2` and `ultralytics` are lazy-imported inside methods so tests can override the validator without loading YOLO. Uploads persisted to `UPLOAD_DIR` (env var, default `./uploads/`, gitignored) and cleaned up on any validation failure.
+- Mypy clean (21 source files). Smoke test (TestClient + in-memory SQLite StaticPool) covers 9 scenarios: 401 unauthenticated, 200 happy path, 422 for pace-too-fast/too-slow/missing, 422 FPS-insufficient (specific PRD message), 422 non-lateral (specific message), 422 missing file. Uvicorn boots with the new router registered.
+- Files: `server/src/video_pipeline.py` (new), `server/src/schemas/video.py` (new), `server/src/routers/videos.py` (new), `server/src/main.py` (wired router), `mypy.ini` (ignore cv2/ultralytics/numpy), `requirements.txt` (added python-multipart), `.gitignore` (uploads/), `server/CLAUDE.md` (validator + upload patterns).
+- **Learnings for future iterations:**
+  - `BackgroundTasks` is a FastAPI-injected parameter (`background_tasks: BackgroundTasks`) — no `Depends()` wrapper. Tasks run after the response is flushed, so the HTTP client never waits on the YOLO pipeline.
+  - YOLO model path comes from `YOLO_POSE_MODEL` env var (default `yolo26x-pose.pt`). The default validator returns `False` for `is_lateral` when the model weight file is missing — production must ensure `yolo26x-pose.pt` is present in CWD or `YOLO_POSE_MODEL`.
+  - When raising 422/perspective errors, clean up the persisted upload first (`_cleanup(saved_path)` in `server/src/routers/videos.py`) — otherwise failed uploads accumulate in `UPLOAD_DIR`.
+  - Pydantic Form-only endpoints cannot use a `BaseModel` body; each form field must be its own `Annotated[..., Form()]` parameter.
+---

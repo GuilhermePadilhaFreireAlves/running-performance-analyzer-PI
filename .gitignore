@@ -15,6 +15,7 @@ __pycache__/
 # Entradas de vídeo / saídas de análise locais
 run/
 grafico_*.png
+uploads/
 
 # Banco local de desenvolvimento (SQLite default)
 server_dev.db

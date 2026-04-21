@@ -48,6 +48,8 @@ mypy
 - Keep migrations dialect-portable: prefer `sa.false()`, `sa.func.now()`, `sa.text(...)` over raw dialect literals.
 - FastAPI endpoints must declare return types — mypy is configured with `disallow_untyped_defs = True` for `server/src/**`.
 - Protect private routes with `from server.src.auth import CurrentUser` and a `user: CurrentUser` parameter. The dependency decodes the JWT, loads the `Usuario`, and emits a uniform 401 (`"Credenciais inválidas"`/`"Não autenticado"`) on every failure path. Tokens are minted by `server.src.security.create_access_token(user_id)` and signed with `SECRET_KEY` (env var, dev default in `security.py`).
+- Heavy external dependencies (OpenCV, Ultralytics YOLO) live behind the `VideoValidator` protocol in `server.src.video_pipeline` and are injected via `Depends(get_video_validator)` (`ValidatorDep` alias in the router). Override with `app.dependency_overrides[get_video_validator]` in tests so YOLO is never loaded. The background pipeline entrypoint is `server.src.video_pipeline.run_pipeline(sessao_id, video_path)` — currently a stub, fleshed out in US-006.
+- Multipart uploads require `python-multipart` (in `requirements.txt`). Endpoints use `pace_min_km: Annotated[float, Form()]` + `file: Annotated[UploadFile, File()]`. Persist uploads to `UPLOAD_DIR` env var (default `./uploads/`, gitignored) before validation, and always clean up on validation failure.
 
 ## Gotchas
 

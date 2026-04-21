@@ -1,0 +1,462 @@
+{
+  "project": "Running Analyzer",
+  "branchName": "dev/padilha",
+  "description": "Sistema de análise biomecânica de corrida por visão computacional. Usuário envia um vídeo lateral e o pace; o backend extrai keypoints com YOLOv8-pose, calcula métricas biomecânicas (ângulo do joelho, cotovelo, tronco, cadência, overstriding, TCS, oscilação vertical, simetria), gera nota geral e recomendações por severidade, e exibe o diagnóstico em dois modos (simplificado e bruto) com histórico paginado.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Criar schema PostgreSQL e migrations",
+      "description": "As a developer, preciso modelar e criar as tabelas USUARIO, SESSAO_ANALISE, METRICA, RECOMENDACAO no PostgreSQL com tooling de migrations para sustentar todo o pipeline.",
+      "acceptanceCriteria": [
+        "Ferramenta de migration instalada e configurada no diretório server/ (Alembic ou equivalente)",
+        "Tabela USUARIO com colunas: id (PK), name, email (unique), senha_hash, altura_cm (NOT NULL), peso_kg, nivel_experiencia, criado_em",
+        "Tabela SESSAO_ANALISE com colunas: id (PK), usuario_id (FK), pace_min_km (float), nota_geral, feedback_ia, status, criado_em",
+        "Coluna SESSAO_ANALISE.status aceita: 'pendente', 'validando_perspectiva', 'detectando_pose', 'calculando_metricas', 'concluido', 'erro_qualidade_keypoints', 'erro_multiplas_pessoas'",
+        "Tabela METRICA com colunas: id (PK), sessao_id (FK), tipo, valor, unidade, apenas_informativa (bool default false)",
+        "Tabela RECOMENDACAO com colunas: id (PK), sessao_id (FK), categoria, descricao, severidade ('informativo' | 'atencao' | 'critico')",
+        "Migration executa com sucesso em banco limpo e cria todas as tabelas com FKs corretas",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Endpoint de cadastro de usuário com bcrypt",
+      "description": "As a corredor, quero criar uma conta fornecendo meus dados para acessar minhas análises e histórico.",
+      "acceptanceCriteria": [
+        "POST /api/users/register aceita { name, email, senha, altura_cm, peso_kg, nivel_experiencia } e retorna 200 com o perfil criado (sem senha)",
+        "Senha armazenada com hash bcrypt (nunca em texto plano)",
+        "altura_cm é obrigatório; requisição sem altura retorna 422 com mensagem clara",
+        "E-mail duplicado retorna 409 com mensagem descritiva, nunca 500",
+        "E-mail inválido ou campos ausentes retornam 422 com detalhe do campo inválido",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Endpoint de login e sessão autenticada",
+      "description": "As a corredor cadastrado, quero fazer login com e-mail e senha para estabelecer uma sessão autenticada.",
+      "acceptanceCriteria": [
+        "POST /api/auth/login aceita { email, senha } e retorna 200 com token de sessão quando válido",
+        "Senha verificada contra hash bcrypt armazenado",
+        "Credenciais inválidas retornam 401 com mensagem genérica (não vaza se o e-mail existe)",
+        "Dependency de autenticação implementada para proteger rotas privadas (retorna 401 sem sessão válida)",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Endpoint de upload de vídeo com validações de backend e trigger assíncrono",
+      "description": "As a corredor autenticado, quero enviar meu vídeo com o pace para que o backend valide e inicie o pipeline assíncrono.",
+      "acceptanceCriteria": [
+        "POST /api/videos/upload aceita form-data com arquivo de vídeo e campo pace_min_km (float); rota exige autenticação",
+        "Cria registro em SESSAO_ANALISE com pace_min_km e status = 'pendente'; retorna 200 com video_id",
+        "Valida FPS ≥ 60 lendo metadados do arquivo; FPS insuficiente retorna 422 com mensagem: 'FPS do vídeo insuficiente — grave com pelo menos 60 FPS para garantir precisão na análise'",
+        "Valida perspectiva lateral (proporção ombro/quadril em frames-amostra via YOLOv8-pose); vídeo frontal/de costas retorna 422 com mensagem de instrução",
+        "Dispara FastAPI Background Task para o pipeline (US-006) imediatamente após validações; usuário não fica bloqueado",
+        "Pace fora de 3:00–12:00 min/km retorna 422 com mensagem clara",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Endpoint de status do processamento",
+      "description": "As a corredor, quero consultar o progresso do processamento do meu vídeo via polling.",
+      "acceptanceCriteria": [
+        "GET /api/videos/{id}/status retorna status atual da SESSAO_ANALISE em texto descritivo mapeado: 'Validando perspectiva', 'Detectando pose com YOLOv8', 'Calculando métricas', 'Concluído', 'Erro: qualidade de keypoints insuficiente', 'Erro: múltiplas pessoas detectadas'",
+        "Rota exige autenticação; sessão de outro usuário retorna 403",
+        "video_id inexistente retorna 404",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Pipeline de detecção de pose YOLOv8-pose com suavização e invalidações",
+      "description": "As a developer, preciso de um módulo que carregue YOLOv8-pose, extraia os 17 keypoints COCO frame a frame com filtro de suavização e invalide análises de baixa qualidade ou com múltiplas pessoas.",
+      "acceptanceCriteria": [
+        "Modelo YOLOv8-pose carregado a partir de yolo26x-pose.pt; caminho configurável via env var",
+        "Para cada frame: extrai 17 keypoints com índices COCO padrão; keypoints com score < 0.5 são descartados do cálculo (valor nulo/NaN)",
+        "Filtro de suavização aplicado às coordenadas x,y por keypoint ao longo do tempo (Kalman ou média móvel) antes de qualquer cálculo biomecânico",
+        "FPS extraído dos metadados do vídeo e persistido associado à sessão",
+        "Se > 50% dos frames têm a maioria dos keypoints com score < 0.5: status → 'erro_qualidade_keypoints', nenhuma METRICA/RECOMENDACAO persistida",
+        "Se o modelo detecta mais de uma pessoa em > 30% dos frames: status → 'erro_multiplas_pessoas', nenhuma METRICA/RECOMENDACAO persistida",
+        "Vídeo bruto descartado da memória após extração dos keypoints; nenhum frame persistido",
+        "Em ambos os erros acima, o pipeline encerra sem passar para as etapas de cálculo",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Utilitário de fator de escala pixels→cm",
+      "description": "As a developer, preciso de uma função utilitária que calcule o fator de escala pixels→cm a partir da altura cadastrada do usuário e da altura detectada em pixels, reutilizável por overstriding e oscilação vertical.",
+      "acceptanceCriteria": [
+        "Função calcula altura_em_pixels como distância euclidiana entre ponto médio dos tornozelos (15/16) e nariz (0) em frames de apoio médio",
+        "fator_escala = altura_real_cm / altura_em_pixels",
+        "Média do fator calculada sobre múltiplos frames para estabilidade",
+        "Função retorna erro descritivo se altura_cm do usuário for nula ou ausente",
+        "Testes unitários cobrindo cálculo com altura real conhecida e pelo menos um caso de borda (keypoints ausentes)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Cálculo de ângulo do joelho (esq/dir) no contato inicial",
+      "description": "As a developer, preciso calcular o ângulo do joelho esq/dir no frame de contato inicial para diagnosticar rigidez ou colapso articular.",
+      "acceptanceCriteria": [
+        "Função recebe série temporal de keypoints e retorna ângulo do joelho no contato inicial para esq e dir",
+        "Ângulo calculado via arccos do produto escalar normalizado entre vetores quadril→joelho (11/12→13/14) e tornozelo→joelho (15/16→13/14)",
+        "Contato inicial detectado como frame onde o tornozelo atinge Y máximo (altitude mínima em coords de imagem) por ciclo",
+        "Salvo em METRICA com tipo='angulo_joelho_esq'/'angulo_joelho_dir', unidade='graus'",
+        "Frames sem os três keypoints válidos são ignorados",
+        "Testes unitários com arrays sintéticos de keypoints validando ângulo reto (180°) e flexão conhecida",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Cálculo de ângulo do cotovelo (esq/dir) — média ao longo dos ciclos",
+      "description": "As a developer, preciso calcular o ângulo médio do cotovelo esq/dir para identificar balanço de braço inadequado.",
+      "acceptanceCriteria": [
+        "Ângulo calculado via arccos do produto escalar entre vetores ombro→cotovelo (5/6→7/8) e pulso→cotovelo (9/10→7/8)",
+        "Média calculada sobre todos os frames válidos do vídeo",
+        "Salvo em METRICA com tipo='angulo_cotovelo_esq'/'angulo_cotovelo_dir', unidade='graus'",
+        "Testes unitários com keypoints sintéticos validando ângulos conhecidos (90°, 120°)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Cálculo de cadência (spm) marcado como apenas informativo",
+      "description": "As a developer, preciso calcular a cadência do corredor sem que ela afete a nota geral, pois varia diretamente com o pace.",
+      "acceptanceCriteria": [
+        "Evento de contato inicial detectado por pé (tornozelo em Y máximo)",
+        "cadencia_spm = (n_contatos / duracao_seg) × 60, usando FPS do vídeo para converter frames em segundos",
+        "Usa contatos do pé direito × 2 conforme PRD Seção 6.3",
+        "Salvo em METRICA com tipo='cadencia', unidade='spm', apenas_informativa=true",
+        "Testes unitários com série sintética de contatos validando contagem e conversão",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Cálculo de inclinação do tronco",
+      "description": "As a developer, preciso calcular o ângulo de inclinação anterior do tronco em relação à vertical para identificar postura inadequada.",
+      "acceptanceCriteria": [
+        "ponto_topo = média(ombro_esq[5], ombro_dir[6]); ponto_base = média(quadril_esq[11], quadril_dir[12])",
+        "inclinacao = arctan(ΔX / ΔY) do vetor base→topo em graus",
+        "Média calculada sobre frames em fase de apoio médio (joelho em flexão ~40°–45°)",
+        "Salvo em METRICA com tipo='inclinacao_tronco', unidade='graus'",
+        "Testes unitários com keypoints sintéticos validando inclinação 0° (ereto) e 10° (frente)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Cálculo de overstriding em cm (esq/dir)",
+      "description": "As a developer, preciso quantificar o deslocamento horizontal do pé em relação ao centro de massa no contato inicial, convertido para cm via fator de escala do usuário.",
+      "acceptanceCriteria": [
+        "CoM_X = (quadril_esq_X[11] + quadril_dir_X[12]) / 2 no frame de contato inicial",
+        "overstriding_px = tornozelo_X - CoM_X (sinal preservado)",
+        "overstriding_cm = overstriding_px × fator_escala (via utilitário US-007)",
+        "Calculado separadamente para esq e dir; média sobre ciclos",
+        "Salvo em METRICA com tipo='overstriding_esq'/'overstriding_dir', unidade='cm'",
+        "Testes unitários validando valores conhecidos com keypoints sintéticos e altura fixa",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Cálculo de Tempo de Contato com o Solo (TCS) marcado como apenas informativo",
+      "description": "As a developer, preciso calcular o TCS de cada pé separadamente em ms, sem penalizar a nota geral (apenas a simetria penaliza).",
+      "acceptanceCriteria": [
+        "Contato inicial: tornozelo em Y máximo; saída do pé: tornozelo inicia elevação contínua (Y decresce)",
+        "tcs_ms = (frames_de_contato / fps) × 1000",
+        "Calculado por ciclo e por pé (esq/dir); valor final é a média dos ciclos válidos",
+        "Salvo em METRICA com tipo='tcs_esq'/'tcs_dir', unidade='ms', apenas_informativa=true",
+        "Testes unitários com série sintética de posições Y validando detecção de início/fim de contato e cálculo em ms",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Cálculo de oscilação vertical (cm)",
+      "description": "As a developer, preciso calcular a oscilação vertical do centro de massa por ciclo de passada, convertida para cm via fator de escala.",
+      "acceptanceCriteria": [
+        "Y_CoM[frame] = (Y_quadril_esq[11] + Y_quadril_dir[12]) / 2",
+        "Por ciclo: ΔY_pixels = |Y_max - Y_min|",
+        "oscilacao_cm = ΔY_pixels × fator_escala (via utilitário US-007); média sobre ciclos",
+        "Salvo em METRICA com tipo='oscilacao_vertical', unidade='cm'",
+        "Testes unitários com série Y sintética validando ΔY e conversão",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Cálculo de índice de simetria (TCS, joelho, oscilação)",
+      "description": "As a developer, preciso calcular o índice de simetria entre lados esq/dir em porcentagem, pois assimetria > 10% é preditor de lesão.",
+      "acceptanceCriteria": [
+        "IS = |valor_esq - valor_dir| / ((valor_esq + valor_dir) / 2) × 100",
+        "Aplicado a TCS, ângulo do joelho no contato inicial e oscilação vertical",
+        "Salvo em METRICA com tipo='simetria_tcs'/'simetria_joelho'/'simetria_oscilacao', unidade='%'",
+        "Retorna erro controlado (não persiste simetria) quando o valor correspondente de um dos lados está ausente",
+        "Testes unitários validando cálculo correto e caso degenerado (lados iguais → 0%)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Gerador de recomendações + nota geral com tabela de thresholds",
+      "description": "As a developer, preciso comparar cada métrica com os thresholds da Seção 9 do PRD, gerar recomendações por severidade e calcular a nota geral.",
+      "acceptanceCriteria": [
+        "Tabela de thresholds implementada conforme Seção 9 do PRD para: ângulo joelho (contato inicial), ângulo cotovelo, inclinação tronco, overstriding, simetria TCS, oscilação vertical, simetria (joelho, oscilação)",
+        "Cada métrica fora do ideal gera ao menos uma RECOMENDACAO com categoria descritiva (texto acionável) e severidade ('informativo'|'atencao'|'critico')",
+        "Métricas com apenas_informativa=true (cadência, TCS absoluto) NÃO penalizam a nota geral",
+        "Nota geral calculada como 10 - (soma_de_penalizações), com pesos maiores para 'critico' que 'atencao'; resultado clamped em [0, 10]",
+        "nota_geral e feedback_ia persistidos em SESSAO_ANALISE; RECOMENDACOES persistidas na tabela",
+        "Status da sessão atualizado para 'concluido' ao final da geração",
+        "Testes unitários com métricas sintéticas cobrindo cada faixa de cada threshold",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Endpoint de diagnóstico simplificado",
+      "description": "As a corredor autenticado, quero acessar minha análise em linguagem acessível via API.",
+      "acceptanceCriteria": [
+        "GET /api/analysis/{id}/simple retorna { nota_geral, feedback_ia, recomendacoes: [{ categoria, descricao, severidade }], metricas_resumidas: [{ tipo, valor, unidade }] }",
+        "Requer autenticação; sessão de outro usuário retorna 403; id inexistente retorna 404",
+        "Sessões com status de erro ('erro_qualidade_keypoints', 'erro_multiplas_pessoas') retornam 200 com campo erro descritivo ao invés de métricas",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Endpoint de dados biomecânicos brutos",
+      "description": "As a corredor avançado ou profissional, quero acessar as séries temporais e coordenadas por frame.",
+      "acceptanceCriteria": [
+        "GET /api/analysis/{id}/raw retorna { fps, frames: [{ frame_idx, keypoints: [[x,y,score], ...], angulo_joelho_esq, angulo_joelho_dir, angulo_cotovelo_esq, angulo_cotovelo_dir, inclinacao_tronco, y_com }], metricas_agregadas: [...], simetria: {...} }",
+        "Requer autenticação; controle de acesso idêntico ao endpoint simples",
+        "Valores ausentes representados como null (não NaN) para serialização JSON",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Endpoint de histórico paginado",
+      "description": "As a corredor, quero listar minhas sessões anteriores com paginação.",
+      "acceptanceCriteria": [
+        "GET /api/historico-analise?page=1&limit=10 retorna { items: [{ id, criado_em, pace_min_km, status, nota_geral }], total, page, limit }",
+        "Ordenação decrescente por criado_em",
+        "Retorna apenas sessões do usuário autenticado",
+        "limit máximo de 50; valores acima são clamped; valores inválidos retornam 422",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Scaffold do frontend React (Vite + rotas + cliente HTTP + contexto de auth)",
+      "description": "As a developer, preciso de um frontend React mínimo com roteamento, cliente HTTP, contexto de autenticação e layout base para sustentar todas as telas.",
+      "acceptanceCriteria": [
+        "Projeto React inicializado (Vite) em client/ ou equivalente, com TypeScript",
+        "Biblioteca de roteamento configurada (React Router) com rotas placeholder: /login, /signup, /upload, /status/:id, /analysis/:id, /analysis/:id/raw, /historico",
+        "Cliente HTTP com base URL configurável via env var e interceptor para anexar token de sessão",
+        "Contexto/hook de autenticação que expõe usuário atual e funções login/logout/signup",
+        "Rotas privadas redirecionam para /login quando não autenticado",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Telas de cadastro e login",
+      "description": "As a corredor, quero formulários de cadastro e login que conversem com a API de auth.",
+      "acceptanceCriteria": [
+        "Tela /signup com campos: nome, e-mail, senha, altura_cm (obrigatório), peso_kg, nivel_experiencia; validação client-side para campos obrigatórios",
+        "Tela /login com campos e-mail, senha",
+        "Cadastro bem-sucedido faz login automático e redireciona para /upload",
+        "Erros da API (409 e-mail duplicado, 401 credenciais inválidas, 422 campos) exibidos de forma clara no formulário",
+        "Token de sessão persistido (localStorage) e hidratado no contexto ao recarregar a página",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Componente de input de pace com conversão pace↔km/h em tempo real",
+      "description": "As a corredor, quero informar pace ou velocidade e ver os dois campos vinculados convertendo em tempo real antes de habilitar o upload.",
+      "acceptanceCriteria": [
+        "Dois campos vinculados: Pace (min:ss /km) e Velocidade (km/h); editar um atualiza o outro",
+        "Conversões: km_h = 60 / pace_decimal; pace_min = floor(60 / km_h); pace_seg = round((60 / km_h % 1) × 60)",
+        "Faixa aceita: pace 3:00–12:00 min/km (5–20 km/h); valores fora da faixa bloqueiam o envio e exibem mensagem",
+        "Estado do pace exportado via prop/callback para o formulário de upload pai (consumido em US-023)",
+        "Testes unitários validando as fórmulas de conversão (incluindo 5:30/km ↔ 10.9 km/h)",
+        "Typecheck passes",
+        "Tests pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Tela de upload com validações de frontend + integração com API",
+      "description": "As a corredor, quero uma tela de upload que valide meu vídeo localmente antes do envio e só habilite o envio quando tudo estiver correto.",
+      "acceptanceCriteria": [
+        "Tela /upload integra o componente de pace (US-022) e um input de arquivo de vídeo",
+        "Frontend lê metadados do vídeo via HTMLVideoElement antes do upload (sem enviar bytes)",
+        "Bloqueia duração < 30s → mensagem: 'Vídeo muito curto — grave pelo menos 30 segundos de corrida contínua'",
+        "Bloqueia duração > 3min → mensagem: 'Vídeo muito longo — envie no máximo 3 minutos'",
+        "Bloqueia resolução < 480p (largura < 640 ou altura < 480) → mensagem: 'Qualidade insuficiente — grave em no mínimo 480p'",
+        "Exibe alerta amarelo quando FPS estimado < 60, avisando que o backend fará validação definitiva",
+        "Botão de envio desabilitado até: vídeo válido + pace preenchido dentro da faixa",
+        "Ao enviar, POST /api/videos/upload com form-data; erros 422 do backend (FPS, perspectiva) exibidos na tela",
+        "Upload bem-sucedido redireciona para /status/:video_id",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Tela de status do processamento com polling",
+      "description": "As a corredor, quero ver o progresso do processamento em tempo real enquanto o vídeo é analisado.",
+      "acceptanceCriteria": [
+        "Tela /status/:id faz polling em GET /api/videos/{id}/status a cada 2s",
+        "Mapeamento visual de etapas: 'Validando perspectiva', 'Detectando pose com YOLOv8', 'Calculando métricas', 'Concluído' com barra de progresso representativa",
+        "Status 'Concluído' → redireciona automaticamente para /analysis/:id",
+        "Status de erro ('erro_qualidade_keypoints', 'erro_multiplas_pessoas') exibe mensagem do PRD e botão 'Enviar novo vídeo' que volta para /upload",
+        "Polling é parado ao desmontar o componente",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Tela de diagnóstico simplificado com cards por severidade",
+      "description": "As a corredor amador, quero ver a nota geral e recomendações em linguagem acessível com indicações visuais.",
+      "acceptanceCriteria": [
+        "Tela /analysis/:id consome GET /api/analysis/{id}/simple",
+        "Nota geral exibida em destaque (ex: 7.2/10) com cor por faixa",
+        "Recomendações renderizadas como cards agrupados por severidade: verde (informativo), amarelo (atenção), vermelho (crítico)",
+        "Cada card mostra categoria e descrição textual clara; nenhum card expõe jargão técnico sem explicação",
+        "Métricas principais apresentadas visualmente (gauges ou barras), não apenas como texto numérico",
+        "Link 'Ver dados técnicos' que navega para /analysis/:id/raw",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Tela de dados biomecânicos brutos com séries temporais e simetria",
+      "description": "As a corredor avançado ou profissional de saúde, quero acessar gráficos por frame e a visualização de simetria esq/dir.",
+      "acceptanceCriteria": [
+        "Tela /analysis/:id/raw consome GET /api/analysis/{id}/raw",
+        "Gráficos de linha por frame para: ângulo joelho esq/dir, ângulo cotovelo esq/dir, inclinação tronco, Y do CoM (biblioteca: Recharts ou similar)",
+        "Visualização de assimetria (TCS, joelho, oscilação) como barras lado a lado ou indicador %",
+        "Legenda, tooltip no hover e eixos rotulados com unidade correta",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "Tela de histórico com paginação",
+      "description": "As a corredor, quero navegar entre minhas análises anteriores para acompanhar evolução.",
+      "acceptanceCriteria": [
+        "Tela /historico consome GET /api/historico-analise?page=X&limit=10",
+        "Timeline/lista mostrando para cada sessão: data, pace, status, nota geral",
+        "Clique em uma sessão concluída navega para /analysis/:id; clique em sessão com erro exibe motivo",
+        "Controles de paginação (anterior/próxima) refletidos na query string",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
