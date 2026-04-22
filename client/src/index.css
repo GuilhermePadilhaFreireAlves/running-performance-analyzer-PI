@@ -233,3 +233,28 @@ code {
   color: var(--text);
 }
 
+.upload-info {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.upload-meta-summary {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.upload-warning {
+  background: rgba(214, 158, 46, 0.12);
+  border: 1px solid rgba(214, 158, 46, 0.5);
+  color: #8a6500;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .upload-warning {
+    color: #f0c060;
+  }
+}
+

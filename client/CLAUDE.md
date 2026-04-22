@@ -43,4 +43,10 @@ Adicione novas páginas em `src/pages/<Nome>Page.tsx`, novas chamadas de API em 
 ## Contratos com o backend
 - `POST /api/auth/login` → `{ access_token, token_type }` (JWT HS256, TTL 60 min).
 - `POST /api/users/register` → `UserProfile` (sem senha). Hook `signup` faz register + login em sequência.
-- Demais endpoints consumidos por histórias futuras: `POST /api/videos/upload`, `GET /api/videos/{id}/status`, `GET /api/analysis/{id}/simple`, `GET /api/analysis/{id}/raw`, `GET /api/historico-analise?page=&limit=`.
+- `POST /api/videos/upload` → `{ video_id, status }`. Multipart com `file` (UploadFile) + `pace_min_km` (form float). 422 cobre pace fora da faixa, FPS insuficiente e perspectiva não-lateral. Helper `uploadVideoRequest({file, paceMinKm})` em `src/api/videos.ts`.
+- Demais endpoints consumidos por histórias futuras: `GET /api/videos/{id}/status`, `GET /api/analysis/{id}/simple`, `GET /api/analysis/{id}/raw`, `GET /api/historico-analise?page=&limit=`.
+
+## Validação de vídeo no cliente (US-023)
+- `src/utils/videoValidation.ts` exporta `validateVideoMetadata(meta)` (puro, testável em Node) com as constantes do PRD: `VIDEO_MIN_DURATION_SEC=30`, `VIDEO_MAX_DURATION_SEC=180`, `VIDEO_MIN_WIDTH=640`, `VIDEO_MIN_HEIGHT=480`, `VIDEO_MIN_FPS=60`. Mensagens em constantes (`VIDEO_TOO_SHORT_MESSAGE`, etc.) — qualquer tela futura que precise revalidar reusa daqui.
+- `src/utils/videoMeta.ts#readVideoMetadata(file)` lê duração/largura/altura via `<video>` em memória + `URL.createObjectURL`, e tenta estimar FPS via `requestVideoFrameCallback` (best-effort). `estimatedFps` pode ser `null` quando o browser não suporta a API ou o autoplay falha — neste caso a validação não emite warning de FPS (backend ainda valida definitivamente). Sempre revogar o object URL e chamar `video.load()` no cleanup.
+- `src/api/videos.ts#uploadVideoRequest({file, paceMinKm})` usa `FormData` (não JSON). O axios deixa o browser definir o `Content-Type: multipart/form-data; boundary=...` — não force header manual.

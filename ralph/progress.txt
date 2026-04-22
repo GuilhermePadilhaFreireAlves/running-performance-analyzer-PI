@@ -54,6 +54,8 @@ Started: Sun Apr 19 15:32:14 PDT 2026
 - Páginas já autenticadas redirecionam com `<Navigate to={redirectTo} replace />` dentro do próprio componente (não em `useEffect`), espelhando o padrão do `PrivateRoute`. Isso evita flash de conteúdo da página de login ao recarregar com token válido.
 - Estilo de formulário: classes `auth-container`, `auth-form`, `.field`, `.field-error`, `.form-error` já vivem em `client/src/index.css`. Reutilize-as em formulários novos (US-023 upload, etc.) em vez de criar CSS local por página.
 - Testes do frontend usam Vitest (`npm test` → `vitest run`, ambiente Node, sem JSDOM). Utilitários puros vivem em `client/src/utils/<nome>.ts` com testes em `client/src/utils/<nome>.test.ts` ao lado. Para componentes que precisem de DOM no futuro, instale `jsdom` + configure `test.environment: 'jsdom'` em `vite.config.ts`.
+- Validações DOM-dependent no frontend (vídeo, futuras integrações com Web APIs) seguem padrão split: lógica pura em `src/utils/<nome>Validation.ts` (testável em Node) + reader/parser DOM em `src/utils/<nome>Meta.ts` (sem teste unitário, validação manual no browser). Constantes de threshold e mensagens vivem na camada pura para reuso/teste.
+- Uploads multipart no frontend usam `FormData` em `src/api/<recurso>.ts` (ex: `videos.ts#uploadVideoRequest`). Nunca defina `Content-Type` manualmente — browser+axios anexa boundary automaticamente. O interceptor de auth global injeta o `Authorization: Bearer` sem interferir.
 
 ---
 
@@ -325,4 +327,16 @@ Started: Sun Apr 19 15:32:14 PDT 2026
   - Conversão pace ↔ km/h: para apresentação, `formatKmH(kmH)` arredonda para 1 casa decimal — é o que faz o roundtrip 5:30 ↔ "10.9" funcionar (10.9 → 5:30 via `kmHToPaceParts`). Não use precisão maior nessa exibição ou o usuário verá variações pequenas ao alternar inputs.
   - Vitest roda em ambiente Node por padrão (sem JSDOM); para testes de componente React em histórias futuras, adicionar `jsdom` + `@testing-library/react` + `test.environment: 'jsdom'` na `vite.config.ts`. Por enquanto só temos testes de utilitários puros.
   - O componente `PaceInput` envolve os dois inputs em `<fieldset>` + `<legend>` (não em `.field` direto) — semântica correta para um par de inputs vinculados. Estilos `.pace-input*` em `index.css`.
+---
+
+## [2026-04-21 21:10] - US-023 Tela de upload com validações de frontend + integração com API
+- Implementada `UploadPage` (`/upload`) integrando `PaceInput` (US-022) + input de arquivo `<input type="file" accept="video/*">`. Lê metadados via `readVideoMetadata(file)` (HTMLVideoElement em memória + `URL.createObjectURL`); estimativa de FPS best-effort via `requestVideoFrameCallback` (null quando indisponível). Validação pura `validateVideoMetadata(meta)` bloqueia duração <30s/>3min, resolução <640×480, e emite warning amarelo para FPS <60. Botão habilitado só com vídeo válido + pace válido. POST `/api/videos/upload` (form-data) → redirect `/status/:video_id`; erros 422 (FPS/perspectiva) exibidos via `extractApiError`.
+- Files: `client/src/api/videos.ts` (novo, helper `uploadVideoRequest`), `client/src/utils/videoValidation.ts` (novo, pura), `client/src/utils/videoValidation.test.ts` (novo, 11 testes), `client/src/utils/videoMeta.ts` (novo, DOM-dependent), `client/src/pages/UploadPage.tsx` (reescrita), `client/src/index.css` (classes `.upload-info`, `.upload-meta-summary`, `.upload-warning`), `client/CLAUDE.md` (notas sobre validação de vídeo + contrato com `/api/videos/upload`).
+- `npm test` 24/24 passing (13 pace + 11 vídeo). `npm run build` (tsc + vite, 0 erros, 287 KB gzipped 93 KB). `npm run dev` sobe HTTP 200 em `/upload`. Dev-browser skill indisponível no ambiente — verificação visual substituída por `curl http://localhost:5173/upload` (HTTP 200) + inspeção do build estático.
+- **Learnings for future iterations:**
+  - `lib.dom.d.ts` do TypeScript 6 já expõe `requestVideoFrameCallback`, `VideoFrameRequestCallback` e `VideoFrameCallbackMetadata` — não redeclare locamente (causa conflito `incorrectly extends`). Use direto `VideoFrameRequestCallback` como tipo do callback.
+  - Validação local de vídeo é split em duas camadas: `videoValidation.ts` (puro, testável em Node sem JSDOM) e `videoMeta.ts` (DOM-dependent). Pure tests cobrem todos os ramos de erro/warning; o reader DOM é validado manualmente no browser. Padrão reutilizável para US-026 se precisar inspecionar metadados de qualquer outro arquivo.
+  - FormData multipart com axios: nunca defina `Content-Type` manualmente — o browser/axios anexa automaticamente o boundary. O interceptor de auth do projeto continua funcionando (apenas adiciona `Authorization`, não toca em `Content-Type`).
+  - Para inputs file controlados por React, use `event.target.files?.[0] ?? null` — `null` é o estado canônico de "sem arquivo" e cobre o caso do usuário cancelar o picker (alguns browsers retornam `FileList` vazio em vez de `null`).
+  - Padrão de redirect pós-ação bem-sucedida: `useNavigate()` + `navigate(\`/status/\${id}\`)` — não use `<Navigate>` aqui (handler é assíncrono, precisa imperativo). Para flows de auth/guard, manter `<Navigate>` no corpo do componente.
 ---
