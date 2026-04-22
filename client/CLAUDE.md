@@ -1,7 +1,7 @@
 # Frontend (client/) — notas para iterações futuras
 
 ## Stack
-Vite 8 + React 19 + TypeScript 6 (scaffolding `create-vite --template react-ts`). Dependências runtime: `react`, `react-dom`, `react-router-dom`, `axios`.
+Vite 8 + React 19 + TypeScript 6 (scaffolding `create-vite --template react-ts`). Dependências runtime: `react`, `react-dom`, `react-router-dom`, `axios`, `recharts` (apenas usado em `AnalysisRawPage` para séries por frame — considere dynamic import se precisar reduzir bundle em histórias futuras).
 
 ## Comandos
 Sempre executar a partir de `client/`:
