@@ -9,6 +9,7 @@ Sempre executar a partir de `client/`:
 - `npm run dev` — Vite dev server em `http://localhost:5173`.
 - `npm run build` — roda `tsc -b` + `vite build`. **Esse é o typecheck da história** (equivalente ao `mypy` do backend).
 - `npm run lint` — ESLint (opcional; não é bloqueador das histórias).
+- `npm test` — Vitest (executa `vitest run` em ambiente Node, sem JSDOM). Use para testes de utilitários puros em `src/utils/*.test.ts`.
 
 `tsconfig.app.json` tem `verbatimModuleSyntax: true` → sempre importe tipos com `import type { ... }`. Tem também `erasableSyntaxOnly: true` → não use `enum`/`namespace` (use objetos `as const`).
 
@@ -27,7 +28,7 @@ client/src/
   main.tsx         # entrypoint Vite
 ```
 
-Adicione novas páginas em `src/pages/<Nome>Page.tsx`, novas chamadas de API em `src/api/<recurso>.ts`, novos hooks em `src/hooks/` (criar ao precisar).
+Adicione novas páginas em `src/pages/<Nome>Page.tsx`, novas chamadas de API em `src/api/<recurso>.ts`, novos hooks em `src/hooks/` (criar ao precisar). Utilitários puros (testáveis sem DOM) ficam em `src/utils/<nome>.ts` e os testes ao lado em `src/utils/<nome>.test.ts` (Vitest, ambiente Node — não usa JSDOM).
 
 ## Convenções (já instaladas)
 - **Base URL**: `API_BASE_URL` em `src/api/client.ts` lê `import.meta.env.VITE_API_BASE_URL` com fallback `http://localhost:8000`. Override via `.env.local` em `client/` (veja `.env.example`).

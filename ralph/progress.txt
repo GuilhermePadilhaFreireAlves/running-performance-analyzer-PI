@@ -53,6 +53,7 @@ Started: Sun Apr 19 15:32:14 PDT 2026
 - Helper unificado para erros de API do axios: `extractApiError(err)` em `client/src/api/errors.ts` retorna `{ general: string | null, fields: Record<string, string> }`. Lida com FastAPI 422 (array de `{loc, msg}` → map por nome de campo), 401, 409, `detail` string e erros de rede. Use em todo formulário/fluxo que chama a API (upload em US-023, qualquer POST futuro).
 - Páginas já autenticadas redirecionam com `<Navigate to={redirectTo} replace />` dentro do próprio componente (não em `useEffect`), espelhando o padrão do `PrivateRoute`. Isso evita flash de conteúdo da página de login ao recarregar com token válido.
 - Estilo de formulário: classes `auth-container`, `auth-form`, `.field`, `.field-error`, `.form-error` já vivem em `client/src/index.css`. Reutilize-as em formulários novos (US-023 upload, etc.) em vez de criar CSS local por página.
+- Testes do frontend usam Vitest (`npm test` → `vitest run`, ambiente Node, sem JSDOM). Utilitários puros vivem em `client/src/utils/<nome>.ts` com testes em `client/src/utils/<nome>.test.ts` ao lado. Para componentes que precisem de DOM no futuro, instale `jsdom` + configure `test.environment: 'jsdom'` em `vite.config.ts`.
 
 ---
 
@@ -312,4 +313,16 @@ Started: Sun Apr 19 15:32:14 PDT 2026
   - Redirect pós-login lê `location.state.from` (tipado como `RedirectState`) — `PrivateRoute` já populou isso. Sempre use `replace: true` nesse navigate para não empilhar a página de login no histórico do browser.
   - `noValidate` no `<form>` desabilita validação nativa do browser para que a validação React dite a UX de mensagens (evita tooltips nativos competindo com `.field-error`).
   - `erasableSyntaxOnly: true` do tsconfig impede `enum` — use `as const` array of `{value, label}` (padrão em `NIVEIS_EXPERIENCIA` na SignupPage) para dropdowns tipados.
+---
+
+## [2026-04-21 21:00] - US-022 Componente de input de pace com conversão pace↔km/h em tempo real
+- Criado `client/src/utils/pace.ts` com helpers puros (`paceTextToDecimal`, `paceDecimalToKmH`, `kmHToPaceParts`, `formatPaceParts`, `formatKmH`, `isPaceInRange`, `isKmHInRange`) seguindo as fórmulas do PRD: `km_h = 60 / pace_decimal`, `pace_min = floor(60 / km_h)`, `pace_seg = round((60/km_h % 1) × 60)`. Carry-over de 60s → próximo minuto coberto.
+- Criado componente `client/src/components/PaceInput.tsx` com dois inputs vinculados (Pace `min:ss` + Velocidade `km/h`). Editar um atualiza o outro em tempo real; valida faixa 3:00–12:00 min/km (5–20 km/h); expõe estado `{paceMinKm, isValid, errorMessage}` via callback `onChange` para o pai (consumido em US-023). `UploadPage` integra o componente como esqueleto da tela.
+- Instalado Vitest (`npm install -D vitest`) + script `npm test`. 13 testes em `src/utils/pace.test.ts` cobrem parsing, conversão bidirecional, roundtrip 5:30 ↔ 10.9 km/h, carry-over de segundos, formatação e guards de faixa. `npm test` (13/13 passing), `npm run build` (tsc + vite, 0 erros), `npm run dev` sobe HTTP 200 em `/upload`.
+- Files: `client/src/utils/pace.ts` (novo), `client/src/utils/pace.test.ts` (novo), `client/src/components/PaceInput.tsx` (novo), `client/src/pages/UploadPage.tsx` (integração), `client/src/index.css` (classes `.pace-input*`), `client/package.json` (script `test` + dep `vitest`), `client/CLAUDE.md` (notas sobre `npm test` e convenção `src/utils/`).
+- **Learnings for future iterations:**
+  - `PaceInput` é o componente canônico de pace — qualquer tela futura (US-023 upload, recadastro de pace de uma sessão) deve consumi-lo via `<PaceInput onChange={setPace} />` e ler `pace.paceMinKm` (decimal min/km) para enviar ao backend. O backend já valida a faixa de novo (US-004), mas o frontend bloqueia o envio antes via `pace.isValid`.
+  - Conversão pace ↔ km/h: para apresentação, `formatKmH(kmH)` arredonda para 1 casa decimal — é o que faz o roundtrip 5:30 ↔ "10.9" funcionar (10.9 → 5:30 via `kmHToPaceParts`). Não use precisão maior nessa exibição ou o usuário verá variações pequenas ao alternar inputs.
+  - Vitest roda em ambiente Node por padrão (sem JSDOM); para testes de componente React em histórias futuras, adicionar `jsdom` + `@testing-library/react` + `test.environment: 'jsdom'` na `vite.config.ts`. Por enquanto só temos testes de utilitários puros.
+  - O componente `PaceInput` envolve os dois inputs em `<fieldset>` + `<legend>` (não em `.field` direto) — semântica correta para um par de inputs vinculados. Estilos `.pace-input*` em `index.css`.
 ---

@@ -206,3 +206,30 @@ code {
 .auth-switch a {
   color: var(--accent);
 }
+
+.pace-input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 0;
+}
+
+.pace-input legend {
+  padding: 0 6px;
+  color: var(--text-h);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.pace-input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pace-input-help {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
