@@ -22,3 +22,18 @@ export async function uploadVideoRequest(
   )
   return data
 }
+
+export interface VideoStatusResponse {
+  video_id: number
+  status: string
+  status_descricao: string
+}
+
+export async function getVideoStatusRequest(
+  videoId: number | string,
+): Promise<VideoStatusResponse> {
+  const { data } = await api.get<VideoStatusResponse>(
+    `/api/videos/${videoId}/status`,
+  )
+  return data
+}
