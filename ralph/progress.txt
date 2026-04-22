@@ -50,6 +50,9 @@ Started: Sun Apr 19 15:32:14 PDT 2026
 - Cliente HTTP do frontend: singleton axios em `client/src/api/client.ts` com base URL de `import.meta.env.VITE_API_BASE_URL` (fallback `http://localhost:8000`). Interceptor global lê `localStorage[TOKEN_STORAGE_KEY]` e injeta `Authorization: Bearer <token>`. Não adicione headers manualmente nas chamadas; chame `api.post(...)` / `api.get(...)` direto.
 - Autenticação do frontend: `AuthProvider` em `client/src/context/AuthContext.tsx` + hook `useAuth()` exposto `{ user, token, isAuthenticated, login, signup, logout }`. `login({email, senha})` bate no `POST /api/auth/login`; `signup(payload)` faz register + login automático e popula o perfil em `user`. JWT decodificado manualmente (sem lib externa) para extrair `sub` como `user.id`. Token persistido em localStorage e hidratado no construtor do provider.
 - Rotas privadas no frontend: envolva o `element` da rota em `<PrivateRoute>` (vive em `client/src/components/PrivateRoute.tsx`) — quando `!isAuthenticated`, renderiza `<Navigate to="/login" replace state={{ from: location.pathname }} />`. US-021+ podem consumir `state.from` via `useLocation()` para retornar à rota original após login. Path de fallback `*` já redireciona para `/login`.
+- Helper unificado para erros de API do axios: `extractApiError(err)` em `client/src/api/errors.ts` retorna `{ general: string | null, fields: Record<string, string> }`. Lida com FastAPI 422 (array de `{loc, msg}` → map por nome de campo), 401, 409, `detail` string e erros de rede. Use em todo formulário/fluxo que chama a API (upload em US-023, qualquer POST futuro).
+- Páginas já autenticadas redirecionam com `<Navigate to={redirectTo} replace />` dentro do próprio componente (não em `useEffect`), espelhando o padrão do `PrivateRoute`. Isso evita flash de conteúdo da página de login ao recarregar com token válido.
+- Estilo de formulário: classes `auth-container`, `auth-form`, `.field`, `.field-error`, `.form-error` já vivem em `client/src/index.css`. Reutilize-as em formulários novos (US-023 upload, etc.) em vez de criar CSS local por página.
 
 ---
 
@@ -296,4 +299,17 @@ Started: Sun Apr 19 15:32:14 PDT 2026
   - O tipo `UserProfile` em `src/api/auth.ts` reflete o shape de `POST /api/users/register` (id, name, email, altura_cm, peso_kg, nivel_experiencia). Quando o backend expuser `GET /api/users/me`, basta adicionar a função + chamar no `AuthProvider` para hidratar `user` com dados completos em login (hoje só temos `{ id }` após login porque o endpoint retorna só o token).
   - Dev-browser skill não está disponível neste ambiente — a verificação em browser da história foi substituída por `curl http://localhost:5173/` (HTTP 200) + inspeção do bundle HTML gerado pelo Vite dev server. Para histórias futuras que exigirem dev-browser, ou o skill é instalado ou esse workaround continua aceitável.
   - Erros de API no frontend: o axios lança quando a resposta não é 2xx. `useAuth().login/signup` propagam o erro — as telas (US-021) devem `try/catch` e extrair `error.response.data.detail` para exibir (409 e-mail duplicado, 401 credenciais inválidas, 422 campos inválidos com detalhe de campo).
+---
+
+## [2026-04-21 20:55] - US-021 Telas de cadastro e login
+- Implementada `LoginPage` (`/login`): campos e-mail/senha, validação client-side obrigatória, `useAuth().login()` + redirect para `state.from` (fallback `/upload`); se já autenticado, `<Navigate>` para `redirectTo`.
+- Implementada `SignupPage` (`/signup`): campos nome, e-mail, senha (≥6), altura_cm (obrigatório, 1–300), peso_kg (opcional), nivel_experiencia (select); usa `useAuth().signup()` que faz register + login automático e redireciona para `/upload`. Erros de API exibidos via helper compartilhado `extractApiError(err)` (geral + por-campo).
+- Criado `client/src/api/errors.ts` (helper axios → `{general, fields}`), estilos `auth-*` adicionados a `client/src/index.css`. `npm run build` (tsc + vite) 0 erros. `npm run dev` sobe 200 em :5173 (dev-browser skill indisponível no ambiente — verificação visual não foi realizada).
+- Files: `client/src/api/errors.ts` (novo), `client/src/pages/LoginPage.tsx`, `client/src/pages/SignupPage.tsx`, `client/src/index.css`.
+- **Learnings for future iterations:**
+  - `extractApiError(err)` cobre as quatro situações reais de erro (401, 409, 422 com lista de campos, e falha de rede). Reutilize em US-023 (upload com 422 de FPS/perspectiva), US-024 (status com 403/404), US-025/US-026 (análise), US-027 (histórico).
+  - Guard "já autenticado" nas telas de auth: `if (isAuthenticated) return <Navigate to={...} replace />` no próprio corpo do componente — mesma convenção do `PrivateRoute`. Não use `useEffect` + `navigate()` (causa flash de conteúdo).
+  - Redirect pós-login lê `location.state.from` (tipado como `RedirectState`) — `PrivateRoute` já populou isso. Sempre use `replace: true` nesse navigate para não empilhar a página de login no histórico do browser.
+  - `noValidate` no `<form>` desabilita validação nativa do browser para que a validação React dite a UX de mensagens (evita tooltips nativos competindo com `.field-error`).
+  - `erasableSyntaxOnly: true` do tsconfig impede `enum` — use `as const` array of `{value, label}` (padrão em `NIVEIS_EXPERIENCIA` na SignupPage) para dropdowns tipados.
 ---

@@ -35,6 +35,9 @@ Adicione novas páginas em `src/pages/<Nome>Page.tsx`, novas chamadas de API em 
 - **Auth**: `useAuth()` expõe `{ user, token, isAuthenticated, login, signup, logout }`. `login({email, senha})` e `signup(payload)` já atualizam o estado + localStorage; `signup` faz login automático em seguida. Decodificação do JWT é manual (função `decodeTokenSubject`) — não dependemos de lib externa.
 - **Rota privada**: envolva o elemento da rota em `<PrivateRoute>` para redirecionar a `/login` quando não autenticado. `login` persiste o `location.pathname` em `state.from` para futuro retorno (US-021 pode consumir).
 - **Rotas esperadas** (já criadas como placeholder): `/login`, `/signup`, `/upload`, `/status/:id`, `/analysis/:id`, `/analysis/:id/raw`, `/historico`. Path de fallback (`*`) redireciona para `/login`.
+- **Erros de API**: use o helper `extractApiError(err)` em `src/api/errors.ts` para converter rejeições do axios em `{ general: string | null, fields: Record<string, string> }`. Cobre 401, 409, 422 (lista FastAPI de `{loc, msg}` → map por campo) e erros de rede. Padrão de uso: `try { await chamada() } catch (err) { const { general, fields } = extractApiError(err); ... }`.
+- **Estilo de formulário**: classes CSS compartilhadas em `src/index.css` — `auth-container`, `auth-form`, `.field` (wrapper de label/input), `.field-error` (erro de campo), `.form-error` (erro geral). Reutilize em qualquer formulário novo (upload, etc.). Use `<form noValidate>` para que a validação React dite a UX em vez de tooltips nativos.
+- **Guard "já autenticado"** em páginas de auth: no corpo do componente, `if (isAuthenticated) return <Navigate to={redirectTo} replace />`. Nada de `useEffect + navigate()` (causa flash de conteúdo). Mesmo padrão do `PrivateRoute`.
 
 ## Contratos com o backend
 - `POST /api/auth/login` → `{ access_token, token_type }` (JWT HS256, TTL 60 min).
