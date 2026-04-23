@@ -1,7 +1,16 @@
 # Frontend (client/) — notas para iterações futuras
 
 ## Stack
-Vite 8 + React 19 + TypeScript 6 (scaffolding `create-vite --template react-ts`). Dependências runtime: `react`, `react-dom`, `react-router-dom`, `axios`, `recharts` (apenas usado em `AnalysisRawPage` para séries por frame — considere dynamic import se precisar reduzir bundle em histórias futuras).
+Vite 8 + React 19 + TypeScript 6 (scaffolding `create-vite --template react-ts`). Dependências runtime: `react`, `react-dom`, `react-router-dom`, `axios`, `recharts` (apenas usado em `AnalysisRawPage` para séries por frame — já isolado num chunk lazy pelo code-splitting de rota; ver seção Performance).
+
+## Performance e code-splitting (US-043)
+Todas as rotas privadas (Upload, Status, Analysis, AnalysisRaw, Historico) são `React.lazy()` + `<Suspense fallback={<LoadingState variant="...">}>` em `client/src/App.tsx`. Login/Signup ficam em import estático — landing sem chunk extra. Helper `privateElement(node, variant)` centraliza `PrivateRoute + AppShell + Suspense`. Rotas novas com layout próprio: considere adicionar uma nova `LoadingVariant` em `components/ui/states/LoadingState.tsx` se as 4 existentes (`status`/`analysis`/`analysis-raw`/`historico`) não espelharem bem. Bundle inicial meta: **< 250 KB gzipped** (atualmente ~97 KB). Recharts vive apenas em `AnalysisRawPage` — se uma nova rota precisar, mantenha o componente chart num arquivo próprio e chame `lazy()` lá (não importe `recharts` estático em nenhum outro lugar).
+
+Timeouts por-endpoint em `client/src/api/client.ts`: `DEFAULT_TIMEOUT_MS=15000` na `axios.create` + request interceptor aplicando `UPLOAD_TIMEOUT_MS=30000` para `/api/videos/upload` e `AUTH_TIMEOUT_MS=10000` para `/api/auth/login` e `/api/users/register`. Para overrides pontuais, passe `timeout` explícito na chamada (ex: `api.get(url, { timeout: 60000 })`).
+
+Preconnect à origem da API é injetado em runtime por `preconnectApiOrigin()` no topo de `main.tsx` (antes do `createRoot`). Guard em `try/catch` em `new URL(...)` + skip quando `apiOrigin === window.location.origin` (dev via proxy do Vite). Não tentar usar `%VITE_API_BASE_URL%` em `index.html` — env vars do Vite não substituem em HTML por default.
+
+Convenção de imagens: todas as ilustrações são SVG inline (Logo, ícones, gradients em heros) — sem `<img>` no código. Se adicionar `<img>` no futuro, SEMPRE declare `width` e `height` explícitos (prevenir CLS) e use `loading="lazy"` para imagens fora da fold.
 
 ## Paleta de charts (US-040)
 Para quaisquer gráficos/overlays que codifiquem esq vs dir ou múltiplas séries numéricas, consuma `OKABE_ITO` em `client/src/utils/rawAnalysis.ts` (`bluishGreen`=esq, `vermillion`=dir, `blue`=tronco, `reddishPurple`=Y CoM, `orange/skyBlue/yellow` disponíveis). Paleta Okabe-Ito preserva contraste em daltonismo e escala de cinza. Faixas ideais por métrica (joelho 15–25°, cotovelo 70–110°, tronco 4–8°) vivem em `FAIXAS_IDEAIS` e replicam `server/src/biomechanics/recomendacoes.py#_classificar_*` — sincronize manualmente se o backend mudar os limiares.
