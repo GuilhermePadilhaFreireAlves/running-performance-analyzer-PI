@@ -6,14 +6,31 @@ export const TOKEN_STORAGE_KEY = 'running_analyzer_token'
 export const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000'
 
+export const AUTH_TIMEOUT_MS = 10_000
+export const UPLOAD_TIMEOUT_MS = 30_000
+export const DEFAULT_TIMEOUT_MS = 15_000
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: DEFAULT_TIMEOUT_MS,
 })
+
+function timeoutFor(url: string | undefined): number {
+  if (!url) return DEFAULT_TIMEOUT_MS
+  if (url.includes('/api/videos/upload')) return UPLOAD_TIMEOUT_MS
+  if (url.includes('/api/auth/login') || url.includes('/api/users/register')) {
+    return AUTH_TIMEOUT_MS
+  }
+  return DEFAULT_TIMEOUT_MS
+}
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY)
   if (token) {
     config.headers.set('Authorization', `Bearer ${token}`)
+  }
+  if (config.timeout === undefined || config.timeout === DEFAULT_TIMEOUT_MS) {
+    config.timeout = timeoutFor(config.url)
   }
   return config
 })
