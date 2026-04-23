@@ -235,7 +235,8 @@ export default function AnalysisPage() {
                   {lista.map((rec, idx) => (
                     <li
                       key={`${sev}-${idx}`}
-                      className={`analysis-card ${display.className}`}
+                      className={`analysis-card list-enter ${display.className}`}
+                      style={{ ['--enter-index' as string]: idx }}
                     >
                       <span className="analysis-card-badge">
                         {display.label}

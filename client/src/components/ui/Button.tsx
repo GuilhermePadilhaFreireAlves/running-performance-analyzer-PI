@@ -44,7 +44,30 @@ export function Button({
       {...rest}
     >
       {loading ? (
-        <span className="ui-button-spinner" aria-hidden="true" />
+        <svg
+          className="ui-button-spinner"
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <circle
+            className="ui-button-spinner-track"
+            cx="8"
+            cy="8"
+            r="6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <path
+            className="ui-button-spinner-arc"
+            d="M14 8a6 6 0 0 0-6-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
       ) : null}
       <span className="ui-button-label">{children}</span>
     </button>

@@ -260,7 +260,7 @@ export default function HistoricoPage() {
             />
           ) : (
             <ul className="historico-cards" aria-label="Sessões de análise">
-              {visibleItems.map((item) => {
+              {visibleItems.map((item, idx) => {
                 const reason = errorReasonForStatus(item.status)
                 const expanded = selectedErrorId === item.id
                 return (
@@ -269,6 +269,7 @@ export default function HistoricoPage() {
                     item={item}
                     reason={reason}
                     expanded={expanded}
+                    enterIndex={idx}
                     onClick={() => handleItemClick(item)}
                   />
                 )
@@ -397,15 +398,25 @@ interface HistoricoCardProps {
   item: HistoricoItem
   reason: string | null
   expanded: boolean
+  enterIndex: number
   onClick: () => void
 }
 
-function HistoricoCard({ item, reason, expanded, onClick }: HistoricoCardProps) {
+function HistoricoCard({
+  item,
+  reason,
+  expanded,
+  enterIndex,
+  onClick,
+}: HistoricoCardProps) {
   const badge = statusBadge(item.status)
   const clickable = isConcluido(item.status) || reason !== null
 
   return (
-    <li className={`historico-card${clickable ? ' historico-card-clickable' : ''}`}>
+    <li
+      className={`historico-card list-enter${clickable ? ' historico-card-clickable' : ''}`}
+      style={{ ['--enter-index' as string]: enterIndex }}
+    >
       <button
         type="button"
         className="historico-card-button"
