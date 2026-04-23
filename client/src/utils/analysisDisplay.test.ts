@@ -9,6 +9,7 @@ import {
   formatNota,
   groupBySeveridade,
   notaClassName,
+  notaClassification,
   severidadeDisplay,
 } from './analysisDisplay'
 
@@ -38,6 +39,22 @@ describe('notaClassName', () => {
   it('retorna neutra para null/NaN', () => {
     expect(notaClassName(null)).toBe('nota-neutral')
     expect(notaClassName(Number.NaN)).toBe('nota-neutral')
+  })
+})
+
+describe('notaClassification', () => {
+  it('mapeia faixas de nota para classificação textual do hero', () => {
+    expect(notaClassification(9)).toBe('Excelente')
+    expect(notaClassification(7)).toBe('Excelente')
+    expect(notaClassification(6)).toBe('Bom')
+    expect(notaClassification(5)).toBe('Bom')
+    expect(notaClassification(4.9)).toBe('Atenção')
+    expect(notaClassification(0)).toBe('Atenção')
+  })
+
+  it('retorna placeholder para null/NaN', () => {
+    expect(notaClassification(null)).toBe('—')
+    expect(notaClassification(Number.NaN)).toBe('—')
   })
 })
 

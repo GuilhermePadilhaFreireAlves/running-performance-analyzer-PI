@@ -1558,14 +1558,10 @@ code {
 }
 
 .analysis-container {
-  max-width: 820px;
+  max-width: 960px;
   margin: 0 auto;
   padding: var(--space-6) var(--space-4) var(--space-12);
   text-align: left;
-}
-
-.analysis-container h1 {
-  text-align: center;
 }
 
 .analysis-loading,
@@ -1575,113 +1571,218 @@ code {
   font-size: var(--text-sm);
 }
 
-.analysis-nota-card {
+/* =============================================================================
+   Hero — anel circular com a nota + classificação + feedback principal.
+   ============================================================================= */
+.analysis-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-1);
-  margin: var(--space-2) auto var(--space-6);
-  padding: var(--space-5) var(--space-8);
-  border-radius: var(--radius-lg);
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+  padding: var(--space-6) var(--space-5);
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border);
-  background: var(--surface-muted);
-  max-width: 320px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
 }
 
-.analysis-nota-label {
+@media (min-width: 640px) {
+  .analysis-hero {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-8);
+    text-align: left;
+  }
+}
+
+.analysis-hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.analysis-hero-label {
+  margin: 0;
   font-size: var(--text-sm);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.analysis-nota-value {
-  font-family: var(--font-display);
-  font-size: var(--text-display);
   font-weight: 500;
-  color: var(--text);
-  line-height: var(--leading-tight);
-}
-
-.analysis-nota-max {
-  font-size: var(--text-xl);
+  letter-spacing: 1px;
+  text-transform: uppercase;
   color: var(--text-muted);
-  margin-left: var(--space-1);
 }
 
-.analysis-nota-card.nota-good {
-  border-color: var(--brand-500);
-  background: var(--brand-50);
+.analysis-hero-classification {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  color: var(--text);
 }
-.analysis-nota-card.nota-good .analysis-nota-value {
+
+.analysis-hero-feedback {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+.analysis-hero.nota-good .analysis-hero-classification {
   color: var(--brand-700);
 }
-.analysis-nota-card.nota-ok {
-  border-color: var(--warning);
-  background: var(--warning-soft);
-}
-.analysis-nota-card.nota-ok .analysis-nota-value {
+.analysis-hero.nota-ok .analysis-hero-classification {
   color: var(--warning-text);
 }
-.analysis-nota-card.nota-bad {
-  border-color: var(--danger);
-  background: var(--danger-soft);
-}
-.analysis-nota-card.nota-bad .analysis-nota-value {
+.analysis-hero.nota-bad .analysis-hero-classification {
   color: var(--danger-text);
 }
 
-.analysis-feedback {
-  text-align: center;
-  color: var(--text);
-  font-size: var(--text-base);
-  margin: 0 auto var(--space-6);
-  max-width: 620px;
+/* Anel SVG — track cinza + progresso colorido por faixa da nota. */
+.analysis-ring {
+  position: relative;
+  flex: 0 0 auto;
+  width: 180px;
+  height: 180px;
 }
 
+.analysis-ring-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.analysis-ring-track {
+  stroke: var(--surface-muted);
+}
+
+.analysis-ring-progress {
+  stroke: var(--text-subtle);
+}
+.analysis-ring.nota-good .analysis-ring-progress {
+  stroke: var(--brand-500);
+}
+.analysis-ring.nota-ok .analysis-ring-progress {
+  stroke: var(--warning);
+}
+.analysis-ring.nota-bad .analysis-ring-progress {
+  stroke: var(--danger);
+}
+
+.analysis-ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-1);
+  color: var(--text);
+}
+
+.analysis-ring-value {
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.analysis-ring.nota-good .analysis-ring-value {
+  color: var(--brand-700);
+}
+.analysis-ring.nota-ok .analysis-ring-value {
+  color: var(--warning-text);
+}
+.analysis-ring.nota-bad .analysis-ring-value {
+  color: var(--danger-text);
+}
+
+.analysis-ring-max {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* =============================================================================
+   Seções.
+   ============================================================================= */
 .analysis-section {
   margin: var(--space-8) 0;
 }
 
 .analysis-section h2 {
   text-align: left;
-  margin-bottom: var(--space-4);
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-xl);
 }
 
-.analysis-metric-list {
+/* =============================================================================
+   Métricas — grid de cards (1 col mobile, 2 col desktop).
+   ============================================================================= */
+.analysis-metric-grid {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .analysis-metric-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+  }
+}
+
+.analysis-metric-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-}
-
-.analysis-metric {
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
   background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 
-.analysis-metric-header {
+.analysis-metric-card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-3);
-  margin-bottom: var(--space-2);
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.analysis-metric-label {
+.analysis-metric-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+
+.analysis-metric-card-label {
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text);
-  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }
 
-.analysis-metric-value {
-  font-family: var(--font-mono);
+.analysis-metric-card-value {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: var(--leading-tight);
   color: var(--text);
-  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .analysis-gauge {
@@ -1718,6 +1819,7 @@ code {
   margin-top: var(--space-1);
   font-size: var(--text-xs);
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .analysis-gauge-ideal-label {
@@ -1725,16 +1827,34 @@ code {
   font-weight: 500;
 }
 
+/* =============================================================================
+   Recomendações — grupos por severidade com cards.
+   ============================================================================= */
 .analysis-severity-group {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .analysis-severity-title {
-  font-size: var(--text-base);
-  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  margin: 0 0 var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
-  display: inline-block;
   border-radius: var(--radius-full);
+  font-weight: 600;
+}
+
+.analysis-severity-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--surface);
 }
 
 .analysis-severity-title.severity-critico {
@@ -1742,19 +1862,29 @@ code {
   background: var(--severity-critico-bg);
   border: 1px solid var(--severity-critico-border);
 }
+.analysis-severity-title.severity-critico .analysis-severity-icon {
+  background: var(--severity-critico-border);
+}
 .analysis-severity-title.severity-atencao {
   color: var(--severity-atencao-text);
   background: var(--severity-atencao-bg);
   border: 1px solid var(--severity-atencao-border);
+}
+.analysis-severity-title.severity-atencao .analysis-severity-icon {
+  background: var(--severity-atencao-border);
 }
 .analysis-severity-title.severity-informativo {
   color: var(--severity-informativo-text);
   background: var(--severity-informativo-bg);
   border: 1px solid var(--severity-informativo-border);
 }
+.analysis-severity-title.severity-informativo .analysis-severity-icon {
+  background: var(--severity-informativo-border);
+}
 .analysis-severity-title.severity-default {
   color: var(--text);
   background: var(--surface-muted);
+  border: 1px solid var(--border);
 }
 
 .analysis-card-list {
@@ -1763,13 +1893,13 @@ code {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .analysis-card {
   border-left: 4px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
   background: var(--surface-muted);
   display: flex;
   flex-direction: column;
@@ -1799,13 +1929,53 @@ code {
 
 .analysis-card-title {
   color: var(--text);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
+  line-height: var(--leading-tight);
 }
 
 .analysis-card-body {
   color: var(--text-muted);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
+}
+
+/* =============================================================================
+   Footer — dois botões (voltar ao histórico + ver dados técnicos).
+   ============================================================================= */
+.analysis-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.analysis-footer .ui-button {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .analysis-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .analysis-footer .ui-button {
+    width: auto;
+  }
+}
+
+/* Compat: classes ainda usadas por `AnalysisRawPage` (feedback textual e
+   rodapé com link). Mantidas até a US-040 redesenhar a tela de dados brutos. */
+.analysis-feedback {
+  text-align: center;
+  color: var(--text);
+  font-size: var(--text-base);
+  margin: 0 auto var(--space-6);
+  max-width: 620px;
 }
 
 .analysis-actions {
@@ -2713,24 +2883,40 @@ code {
   gap: var(--space-3);
 }
 
-/* Analysis page skeleton */
+/* Analysis page skeleton — espelha o layout final (hero + grid 2-col). */
 .loading-analysis {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  align-items: center;
 }
 
-.loading-analysis-nota {
+.loading-analysis-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-5) var(--space-8);
-  border-radius: var(--radius-lg);
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-5);
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border);
-  background: var(--surface-muted);
-  max-width: 320px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 640px) {
+  .loading-analysis-hero {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-8);
+  }
+}
+
+.loading-analysis-hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
 }
 
@@ -2742,11 +2928,25 @@ code {
   gap: var(--space-4);
 }
 
+.loading-analysis-metric-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .loading-analysis-metric-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+  }
+}
+
 .loading-analysis-metric {
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
   background: var(--surface);
+  box-shadow: var(--shadow-xs);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -2754,8 +2954,8 @@ code {
 
 .loading-analysis-metric-header {
   display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .loading-analysis-card {

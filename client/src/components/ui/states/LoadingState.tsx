@@ -51,23 +51,29 @@ function StatusSkeleton() {
 function AnalysisSkeleton() {
   return (
     <div className="loading-analysis">
-      <div className="loading-analysis-nota" aria-hidden="true">
-        <Skeleton width="120px" height="14px" />
-        <Skeleton width="160px" height="48px" />
+      <div className="loading-analysis-hero" aria-hidden="true">
+        <Skeleton width="180px" height="180px" rounded />
+        <div className="loading-analysis-hero-body">
+          <Skeleton width="100px" height="14px" />
+          <Skeleton width="180px" height="28px" />
+          <Skeleton width="80%" height="16px" />
+          <Skeleton width="60%" height="16px" />
+        </div>
       </div>
-      <Skeleton width="80%" height="16px" />
-      <Skeleton width="70%" height="16px" />
       <div className="loading-analysis-section" aria-hidden="true">
         <Skeleton width="180px" height="22px" />
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="loading-analysis-metric">
-            <div className="loading-analysis-metric-header">
-              <Skeleton width="40%" height="14px" />
-              <Skeleton width="60px" height="14px" />
+        <div className="loading-analysis-metric-grid">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="loading-analysis-metric">
+              <div className="loading-analysis-metric-header">
+                <Skeleton width="36px" height="36px" rounded />
+                <Skeleton width="60%" height="14px" />
+              </div>
+              <Skeleton width="40%" height="22px" />
+              <Skeleton width="100%" height="10px" />
             </div>
-            <Skeleton width="100%" height="10px" />
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       <div className="loading-analysis-section" aria-hidden="true">
         <Skeleton width="200px" height="22px" />
