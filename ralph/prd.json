@@ -667,7 +667,7 @@
         "Verify in browser que drag-drop funciona, preview aparece, upload mostra progresso e mensagem 422 aparece corretamente"
       ],
       "priority": 37,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
