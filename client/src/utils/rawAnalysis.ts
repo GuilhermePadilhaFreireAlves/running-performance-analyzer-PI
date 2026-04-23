@@ -38,13 +38,13 @@ export const CHART_SPECS: readonly ChartSpec[] = [
       {
         key: 'angulo_joelho_esq',
         label: 'Joelho esq.',
-        color: '#aa3bff',
+        color: '#10B981',
         transform: flexaoFromInterno,
       },
       {
         key: 'angulo_joelho_dir',
         label: 'Joelho dir.',
-        color: '#16a34a',
+        color: '#FB923C',
         transform: flexaoFromInterno,
       },
     ],
@@ -54,8 +54,8 @@ export const CHART_SPECS: readonly ChartSpec[] = [
     unidade: '°',
     yLabel: 'Ângulo (°)',
     series: [
-      { key: 'angulo_cotovelo_esq', label: 'Cotovelo esq.', color: '#aa3bff' },
-      { key: 'angulo_cotovelo_dir', label: 'Cotovelo dir.', color: '#16a34a' },
+      { key: 'angulo_cotovelo_esq', label: 'Cotovelo esq.', color: '#10B981' },
+      { key: 'angulo_cotovelo_dir', label: 'Cotovelo dir.', color: '#FB923C' },
     ],
   },
   {

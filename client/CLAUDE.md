@@ -3,6 +3,9 @@
 ## Stack
 Vite 8 + React 19 + TypeScript 6 (scaffolding `create-vite --template react-ts`). Dependências runtime: `react`, `react-dom`, `react-router-dom`, `axios`, `recharts` (apenas usado em `AnalysisRawPage` para séries por frame — considere dynamic import se precisar reduzir bundle em histórias futuras).
 
+## Design tokens (US-028)
+Fonte única em `client/src/styles/tokens.css` (importado **antes** de `index.css` em `main.tsx`). Tema light + override completo via `@media (prefers-color-scheme: dark)`. Documentação tabular (paleta + escalas) em `client/src/styles/README.md`. Direção: **Emerald (`--brand-*`) + Tangerine (`--accent-*`) sobre Slate frio**; nunca preto puro (dark `--bg = #0F172A`). Convenção: `--text` = headline (`#0F172A`), `--text-muted` = body, `--text-subtle` = hints (invertido do esquema antigo `--text-h`/`--text`). Severidades de recomendação têm tokens dedicados `--severity-{critico,atencao,informativo}-{bg,border,text}` separados das semânticas genéricas (`--success/warning/danger/info`). Sempre consuma `var(--token)` em CSS — proibido hex/rgba hard-coded em `index.css` ou em estilos por página/componente.
+
 ## Comandos
 Sempre executar a partir de `client/`:
 - `npm install` — instala dependências (não é necessário re-instalar entre iterações).
