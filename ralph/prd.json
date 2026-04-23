@@ -562,7 +562,7 @@
         "Verify in browser que trigger de toast funciona com teclado e que prefers-reduced-motion desativa a animação"
       ],
       "priority": 32,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

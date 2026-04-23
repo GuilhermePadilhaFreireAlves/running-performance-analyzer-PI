@@ -13,6 +13,8 @@ import {
   STATUS_CONCLUIDO,
 } from '../utils/videoStatus'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useToast } from '../context/ToastContext'
+import { Banner } from '../components/ui'
 
 const POLL_INTERVAL_MS = 2000
 
@@ -32,9 +34,11 @@ export default function StatusPage() {
   usePageTitle('Processando')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const toast = useToast()
   const [state, setState] = useState<FetchState>(INITIAL_STATE)
   const timerRef = useRef<number | null>(null)
   const cancelledRef = useRef(false)
+  const errorNotifiedRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -44,6 +48,7 @@ export default function StatusPage() {
       try {
         const data = await getVideoStatusRequest(id)
         if (cancelledRef.current) return
+        errorNotifiedRef.current = null
         setState({ status: data, error: null, loading: false })
         if (data.status === STATUS_CONCLUIDO) {
           cancelledRef.current = true
@@ -58,11 +63,12 @@ export default function StatusPage() {
       } catch (err) {
         if (cancelledRef.current) return
         const { general } = extractApiError(err)
-        setState({
-          status: null,
-          error: general ?? 'Não foi possível consultar o status.',
-          loading: false,
-        })
+        const message = general ?? 'Não foi possível consultar o status.'
+        if (errorNotifiedRef.current !== message) {
+          errorNotifiedRef.current = message
+          toast.error(message)
+        }
+        setState((prev) => ({ ...prev, error: message, loading: false }))
         timerRef.current = window.setTimeout(poll, POLL_INTERVAL_MS)
       }
     }
@@ -76,15 +82,15 @@ export default function StatusPage() {
         timerRef.current = null
       }
     }
-  }, [id, navigate])
+  }, [id, navigate, toast])
 
   if (!id) {
     return (
       <main id="main" tabIndex={-1} className="auth-container">
         <h1>Status da análise</h1>
-        <p className="form-error" role="alert">
+        <Banner variant="danger" assertive>
           Sessão inválida — identificador ausente.
-        </p>
+        </Banner>
       </main>
     )
   }
@@ -106,8 +112,10 @@ export default function StatusPage() {
       ) : null}
 
       {showError && errorMessage ? (
-        <div className="status-error" role="alert">
-          <p className="form-error">{errorMessage}</p>
+        <div className="status-error">
+          <Banner variant="danger" assertive>
+            {errorMessage}
+          </Banner>
           <button
             type="button"
             className="status-restart-button"
@@ -159,12 +167,6 @@ export default function StatusPage() {
           <p className="status-current" aria-live="polite">
             {descricao}
           </p>
-
-          {state.error ? (
-            <p className="form-error" role="alert">
-              {state.error}
-            </p>
-          ) : null}
         </>
       )}
     </main>

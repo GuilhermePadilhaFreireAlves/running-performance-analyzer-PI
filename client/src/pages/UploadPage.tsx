@@ -12,6 +12,7 @@ import type {
   VideoValidationResult,
 } from '../utils/videoValidation'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useToast } from '../context/ToastContext'
 
 interface VideoState {
   file: File | null
@@ -42,6 +43,7 @@ export default function UploadPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const navigate = useNavigate()
+  const toast = useToast()
 
   const handlePaceChange = useCallback((next: PaceInputValue) => {
     setPace(next)
@@ -113,6 +115,7 @@ export default function UploadPage() {
         file: video.file,
         paceMinKm: pace.paceMinKm,
       })
+      toast.success('Vídeo enviado. Iniciando análise.')
       navigate(`/status/${response.video_id}`)
     } catch (err) {
       const { general } = extractApiError(err)

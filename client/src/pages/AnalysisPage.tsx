@@ -17,10 +17,13 @@ import {
   severidadeDisplay,
 } from '../utils/analysisDisplay'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useToast } from '../context/ToastContext'
+import { Banner } from '../components/ui'
 
 export default function AnalysisPage() {
   usePageTitle('Diagnóstico')
   const { id } = useParams<{ id: string }>()
+  const toast = useToast()
   const [data, setData] = useState<AnalysisSimpleResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +42,9 @@ export default function AnalysisPage() {
       .catch((err: unknown) => {
         if (cancelled) return
         const { general } = extractApiError(err)
-        setError(general ?? 'Não foi possível carregar a análise.')
+        const message = general ?? 'Não foi possível carregar a análise.'
+        setError(message)
+        toast.error(message)
       })
       .finally(() => {
         if (cancelled) return
@@ -48,13 +53,15 @@ export default function AnalysisPage() {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, toast])
 
   if (!id) {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
-        <p className="form-error">Identificador de análise ausente.</p>
+        <Banner variant="danger" assertive>
+          Identificador de análise ausente.
+        </Banner>
       </main>
     )
   }
@@ -72,9 +79,11 @@ export default function AnalysisPage() {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
-        <p className="form-error">{error}</p>
-        <p>
-          <Link to="/historico">Ver histórico de análises</Link>
+        <p className="analysis-empty">Não foi possível carregar. Tente novamente.</p>
+        <p className="analysis-actions">
+          <Link to="/historico" className="analysis-primary-link">
+            Voltar ao histórico
+          </Link>
         </p>
       </main>
     )
@@ -86,7 +95,9 @@ export default function AnalysisPage() {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
-        <p className="form-error">{data.erro}</p>
+        <Banner variant="danger" assertive>
+          {data.erro}
+        </Banner>
         <p className="analysis-actions">
           <Link to="/upload" className="analysis-primary-link">
             Enviar novo vídeo
