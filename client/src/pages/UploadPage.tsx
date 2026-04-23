@@ -461,6 +461,7 @@ export default function UploadPage() {
         <PaceInput onChange={handlePaceChange} />
 
         <details
+          id="dicas"
           className="upload-hint"
           open={hintOpen}
           onToggle={(event) =>

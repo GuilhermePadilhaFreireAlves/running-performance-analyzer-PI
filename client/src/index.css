@@ -1168,73 +1168,279 @@ code {
   }
 }
 
+/* =============================================================================
+   Status page (US-038) — hero with animated runner, stepper, and progress bar.
+   Progress uses `transform: scaleX` (compositor-friendly). Stepper is vertical
+   on mobile and horizontal on viewports >= 640px. Runner animation respects
+   prefers-reduced-motion via the global neutralizer in this file.
+   ============================================================================= */
 .status-container {
-  max-width: 520px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-12);
+  text-align: left;
+}
+
+.status-heading {
+  text-align: center;
+  margin-bottom: var(--space-1);
 }
 
 .status-subtitle {
   text-align: center;
   color: var(--text-muted);
   font-size: var(--text-sm);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.status-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  margin: var(--space-4) 0 var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.status-hero-celebrating {
+  background: linear-gradient(
+    180deg,
+    var(--severity-informativo-bg) 0%,
+    var(--surface) 100%
+  );
+  border-color: var(--severity-informativo-border);
+}
+
+.status-hero-runner {
+  width: 100%;
+  max-width: 260px;
+}
+
+.status-hero-runner svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.runner-motion-line {
+  stroke: var(--brand-500);
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.25;
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: runner-motion-pulse var(--runner-speed, 1.2s) var(--ease-standard)
+    infinite;
+}
+
+.runner-motion-line-1 {
+  animation-delay: 0s;
+}
+
+.runner-motion-line-2 {
+  animation-delay: calc(var(--runner-speed, 1.2s) * -0.3);
+}
+
+.runner-motion-line-3 {
+  animation-delay: calc(var(--runner-speed, 1.2s) * -0.6);
+}
+
+@keyframes runner-motion-pulse {
+  0% {
+    transform: translateX(-8px);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.runner-head {
+  fill: var(--brand-500);
+}
+
+.runner-torso,
+.runner-arm,
+.runner-leg {
+  stroke: var(--brand-600);
+  stroke-width: 4.5;
+  fill: none;
+}
+
+.runner-arm,
+.runner-leg {
+  transform-box: fill-box;
+  transform-origin: 0% 0%;
+  animation: runner-limb-swing var(--runner-speed, 1.2s) var(--ease-standard)
+    infinite;
+}
+
+.runner-arm-front,
+.runner-leg-front {
+  animation-delay: 0s;
+}
+
+.runner-arm-back,
+.runner-leg-back {
+  animation-delay: calc(var(--runner-speed, 1.2s) * -0.5);
+}
+
+@keyframes runner-limb-swing {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+.runner-ground {
+  stroke: var(--border);
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+}
+
+.status-hero-runner-celebrating .runner-motion-line,
+.status-hero-runner-celebrating .runner-arm,
+.status-hero-runner-celebrating .runner-leg {
+  animation-duration: 2s;
+  animation-timing-function: var(--ease-out);
+}
+
+.status-hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  text-align: center;
+}
+
+.status-hero-elapsed {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+  font-size: var(--text-base);
+  margin: 0;
+}
+
+.status-hero-estimate {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  margin: 0;
 }
 
 .status-progress {
+  position: relative;
   width: 100%;
   height: 10px;
   background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
   overflow: hidden;
-  margin: var(--space-6) 0 var(--space-4);
+  margin: 0 0 var(--space-5);
 }
 
-.status-progress-bar {
-  height: 100%;
+.status-progress-fill {
+  position: absolute;
+  inset: 0;
   background: var(--brand-500);
   border-radius: var(--radius-full);
-  transition: width var(--duration-base) var(--ease-standard);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform var(--duration-base) var(--ease-standard);
+  will-change: transform;
 }
 
-.status-stage-list {
+.status-stepper {
   list-style: none;
   padding: 0;
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
-.status-stage {
+.status-stepper-item {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   font-size: var(--text-sm);
   color: var(--text-muted);
+  min-height: 28px;
 }
 
-.status-stage-marker {
-  width: 14px;
-  height: 14px;
+.status-stepper-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   border-radius: var(--radius-full);
   border: 2px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+  color: var(--text-on-brand);
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
 }
 
-.status-stage-done .status-stage-marker {
+.status-stepper-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--text-subtle);
+}
+
+.status-stepper-item-done .status-stepper-marker {
   background: var(--brand-500);
   border-color: var(--brand-500);
 }
 
-.status-stage-active .status-stage-marker {
+.status-stepper-item-done .status-stepper-dot {
+  display: none;
+}
+
+.status-stepper-item-active .status-stepper-marker {
   border-color: var(--brand-500);
   box-shadow: var(--shadow-focus);
 }
 
-.status-stage-done,
-.status-stage-active {
+.status-stepper-item-active .status-stepper-dot {
+  background: var(--brand-500);
+  animation: status-stepper-pulse 1.2s var(--ease-standard) infinite;
+}
+
+@keyframes status-stepper-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0.6;
+  }
+}
+
+.status-stepper-item-done,
+.status-stepper-item-active {
   color: var(--text);
+}
+
+.status-stepper-item-active .status-stepper-label {
+  color: var(--brand-500);
+  font-weight: 600;
 }
 
 .status-current {
@@ -1244,28 +1450,111 @@ code {
   margin-top: var(--space-2);
 }
 
-.status-error {
+.status-error-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   margin-top: var(--space-4);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--severity-critico-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
-.status-restart-button {
-  font: inherit;
-  font-weight: 600;
-  color: var(--text-on-brand);
-  background: var(--brand-500);
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-4);
-  min-height: 48px;
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-standard);
+.status-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
-.status-restart-button:hover {
-  background: var(--brand-600);
+.status-celebration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--severity-informativo-bg);
+  border: 1px solid var(--severity-informativo-border);
+  color: var(--severity-informativo-text);
+  text-align: center;
+  margin-top: var(--space-2);
+}
+
+.status-celebration-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.status-celebration-subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.status-celebration-cta {
+  margin-top: var(--space-2);
+  text-decoration: none;
+}
+
+@media (min-width: 640px) {
+  .status-hero {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-6);
+    padding: var(--space-6) var(--space-8);
+  }
+
+  .status-hero-runner {
+    max-width: 280px;
+  }
+
+  .status-hero-info {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .status-stepper {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  .status-stepper-item {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-2);
+    position: relative;
+    padding: 0 var(--space-2);
+  }
+
+  .status-stepper-item + .status-stepper-item::before {
+    content: '';
+    position: absolute;
+    left: calc(-50% + 11px);
+    right: calc(50% + 11px);
+    top: 10px;
+    height: 2px;
+    background: var(--border);
+  }
+
+  .status-stepper-item-done + .status-stepper-item::before,
+  .status-stepper-item-done + .status-stepper-item-done::before {
+    background: var(--brand-500);
+  }
+
+  .status-stepper-label {
+    font-size: var(--text-xs);
+    line-height: 1.3;
+  }
 }
 
 .analysis-container {
