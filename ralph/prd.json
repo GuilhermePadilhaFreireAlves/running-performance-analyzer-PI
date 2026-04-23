@@ -729,7 +729,7 @@
         "Verify in browser que charts são responsivos, tooltip é legível e paleta funciona em escala de cinza"
       ],
       "priority": 40,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
