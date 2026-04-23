@@ -5,11 +5,16 @@ import {
   asymmetryBarPct,
   asymmetryStatus,
   buildAsymmetryRows,
+  buildCsv,
+  buildCsvFilename,
   buildFramePoints,
   flexaoFromInterno,
   formatAsymmetry,
   formatChartValue,
+  isFrameOutOfRange,
+  isValueOutOfRange,
 } from './rawAnalysis'
+import type { FramePoint } from './rawAnalysis'
 import type { RawFrame, SimetriaRawResponse } from '../api/analysis'
 
 function frame(overrides: Partial<RawFrame>): RawFrame {
@@ -201,5 +206,112 @@ describe('formatChartValue', () => {
     expect(formatChartValue(undefined, '°')).toBe('—')
     expect(formatChartValue(Number.NaN, '°')).toBe('—')
     expect(formatChartValue('abc', '°')).toBe('—')
+  })
+})
+
+describe('isValueOutOfRange', () => {
+  it('classifica flexão do joelho na faixa ideal 15–25°', () => {
+    expect(isValueOutOfRange(14.9, 'angulo_joelho_esq')).toBe(true)
+    expect(isValueOutOfRange(15, 'angulo_joelho_esq')).toBe(false)
+    expect(isValueOutOfRange(20, 'angulo_joelho_dir')).toBe(false)
+    expect(isValueOutOfRange(25, 'angulo_joelho_esq')).toBe(false)
+    expect(isValueOutOfRange(25.1, 'angulo_joelho_esq')).toBe(true)
+  })
+
+  it('classifica cotovelo fora de 70–110°', () => {
+    expect(isValueOutOfRange(90, 'angulo_cotovelo_esq')).toBe(false)
+    expect(isValueOutOfRange(50, 'angulo_cotovelo_dir')).toBe(true)
+    expect(isValueOutOfRange(130, 'angulo_cotovelo_esq')).toBe(true)
+  })
+
+  it('classifica tronco fora de 4–8°', () => {
+    expect(isValueOutOfRange(5, 'inclinacao_tronco')).toBe(false)
+    expect(isValueOutOfRange(0, 'inclinacao_tronco')).toBe(true)
+    expect(isValueOutOfRange(12, 'inclinacao_tronco')).toBe(true)
+  })
+
+  it('null/undefined/NaN nunca destacam', () => {
+    expect(isValueOutOfRange(null, 'angulo_joelho_esq')).toBe(false)
+    expect(isValueOutOfRange(undefined, 'angulo_joelho_esq')).toBe(false)
+    expect(isValueOutOfRange(Number.NaN, 'angulo_joelho_esq')).toBe(false)
+  })
+})
+
+describe('isFrameOutOfRange', () => {
+  function point(overrides: Partial<FramePoint> = {}): FramePoint {
+    return {
+      frame_idx: 0,
+      angulo_joelho_esq: 20,
+      angulo_joelho_dir: 20,
+      angulo_cotovelo_esq: 90,
+      angulo_cotovelo_dir: 90,
+      inclinacao_tronco: 6,
+      y_com: 500,
+      ...overrides,
+    }
+  }
+
+  it('retorna false quando todas as métricas estão na faixa ideal', () => {
+    expect(isFrameOutOfRange(point())).toBe(false)
+  })
+
+  it('retorna true se qualquer métrica está fora', () => {
+    expect(isFrameOutOfRange(point({ angulo_joelho_esq: 40 }))).toBe(true)
+    expect(isFrameOutOfRange(point({ inclinacao_tronco: 20 }))).toBe(true)
+    expect(isFrameOutOfRange(point({ angulo_cotovelo_dir: 50 }))).toBe(true)
+  })
+
+  it('ignora y_com (métrica sem faixa ideal visual)', () => {
+    expect(isFrameOutOfRange(point({ y_com: 99999 }))).toBe(false)
+  })
+})
+
+describe('buildCsv', () => {
+  it('gera header + linhas com decimais apropriados', () => {
+    const pts: FramePoint[] = [
+      {
+        frame_idx: 0,
+        angulo_joelho_esq: 20.12345,
+        angulo_joelho_dir: 22.7,
+        angulo_cotovelo_esq: 90,
+        angulo_cotovelo_dir: 95,
+        inclinacao_tronco: 6.3,
+        y_com: 500.4,
+      },
+    ]
+    const csv = buildCsv(pts)
+    const lines = csv.split('\n')
+    expect(lines).toHaveLength(2)
+    expect(lines[0]).toBe(
+      'frame_idx,flexao_joelho_esq_graus,flexao_joelho_dir_graus,angulo_cotovelo_esq_graus,angulo_cotovelo_dir_graus,inclinacao_tronco_graus,y_com_px',
+    )
+    expect(lines[1]).toBe('0,20.1,22.7,90.0,95.0,6.3,500.4')
+  })
+
+  it('null/NaN viram células vazias, frame_idx sem decimais', () => {
+    const pts: FramePoint[] = [
+      {
+        frame_idx: 7,
+        angulo_joelho_esq: null,
+        angulo_joelho_dir: Number.NaN,
+        angulo_cotovelo_esq: undefined,
+        angulo_cotovelo_dir: 100,
+        inclinacao_tronco: null,
+        y_com: null,
+      },
+    ]
+    const csv = buildCsv(pts)
+    expect(csv.split('\n')[1]).toBe('7,,,,100.0,,')
+  })
+
+  it('retorna apenas header quando não há pontos', () => {
+    expect(buildCsv([]).split('\n')).toHaveLength(1)
+  })
+})
+
+describe('buildCsvFilename', () => {
+  it('compoõe nome do arquivo com o id da sessão', () => {
+    expect(buildCsvFilename(42)).toBe('stride-analise-42-frames.csv')
+    expect(buildCsvFilename('abc')).toBe('stride-analise-abc-frames.csv')
   })
 })

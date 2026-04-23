@@ -1968,28 +1968,9 @@ code {
   }
 }
 
-/* Compat: classes ainda usadas por `AnalysisRawPage` (feedback textual e
-   rodapé com link). Mantidas até a US-040 redesenhar a tela de dados brutos. */
-.analysis-feedback {
-  text-align: center;
-  color: var(--text);
-  font-size: var(--text-base);
-  margin: 0 auto var(--space-6);
-  max-width: 620px;
-}
-
-.analysis-actions {
-  margin: var(--space-6) 0 0;
-  text-align: center;
-}
-
-.analysis-raw-link,
 .analysis-primary-link {
   font-weight: 600;
   color: var(--brand-600);
-}
-
-.analysis-primary-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1999,30 +1980,168 @@ code {
   border-radius: var(--radius-sm);
 }
 
+/* =============================================================================
+   AnalysisRawPage — dados técnicos (US-040).
+   ============================================================================= */
+.raw-container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-12);
+  text-align: left;
+}
+
+.raw-container h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-3xl);
+}
+
+.raw-back {
+  margin-bottom: var(--space-3);
+}
+
+.raw-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+}
+
+@media (min-width: 640px) {
+  .raw-header {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-5);
+  }
+}
+
+.raw-subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.raw-section {
+  margin: 0 0 var(--space-10);
+}
+
+.raw-section > h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-xl);
+}
+
+.raw-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .raw-section-header {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+}
+
+.raw-section-header > h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.raw-section-help {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.raw-legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+.raw-legend-esq {
+  background: #009E73;
+}
+
+.raw-legend-dir {
+  background: #D55E00;
+}
+
+/* Chips de filtro ---------------------------------------------------------- */
+.raw-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.raw-chip {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  touch-action: manipulation;
+  min-height: 32px;
+  display: inline-flex;
+}
+
+.raw-chip:focus-visible {
+  box-shadow: var(--shadow-focus);
+  outline: none;
+}
+
+.raw-chip .ui-badge {
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.raw-chip:hover .ui-badge {
+  transform: translateY(-1px);
+}
+
+.raw-chip-active .ui-badge {
+  box-shadow: var(--shadow-sm);
+}
+
+/* Grid de charts ----------------------------------------------------------- */
 .raw-chart-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-5);
 }
 
-@media (min-width: 760px) {
+@media (min-width: 900px) {
   .raw-chart-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
 
+.raw-chart-grid-single {
+  grid-template-columns: 1fr !important;
+}
+
 .raw-chart {
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-3) var(--space-1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-4) var(--space-3);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .raw-chart-title {
-  font-size: var(--text-sm);
-  font-weight: 500;
+  font-size: var(--text-base);
+  font-weight: 600;
   color: var(--text);
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-3);
 }
 
 .raw-chart-body {
@@ -2031,8 +2150,9 @@ code {
 
 .raw-asymmetry-help {
   color: var(--text-muted);
-  font-size: var(--text-xs);
-  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-4);
+  line-height: var(--leading-normal);
 }
 
 .raw-asymmetry-list {
@@ -2115,6 +2235,92 @@ code {
   bottom: -3px;
   width: 2px;
   background: var(--text-subtle);
+}
+
+/* Tabela densa por frame --------------------------------------------------- */
+.raw-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.raw-table-wrap:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.raw-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.raw-table thead {
+  background: var(--surface-muted);
+}
+
+.raw-table th,
+.raw-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-table th:first-child,
+.raw-table td:first-child {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.raw-table th {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+}
+
+.raw-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.raw-table tbody tr.raw-table-outlier {
+  background: var(--severity-atencao-bg);
+}
+
+.raw-table-null {
+  color: var(--text-subtle);
+}
+
+.raw-table-cell-warn {
+  color: var(--severity-critico-text);
+  font-weight: 600;
+}
+
+.raw-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.raw-pagination-status {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.raw-footer {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border);
 }
 
 .historico-container {
