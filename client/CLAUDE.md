@@ -15,6 +15,25 @@ Skip-to-content (`<a className="skip-link" href="#main">`) vive em `client/src/A
 
 Hierarquia de heading: exatamente **um `<h1>` por página**, `<h2>` para seções. Botões icon-only (hamburger, drawer close, user-menu, paginação do histórico) precisam de `aria-label` descritivo em pt-BR; decorações em texto (setas `←`/`→`) ficam `aria-hidden="true"` para não serem lidas pelo leitor de tela.
 
+## Biblioteca de componentes (US-031)
+Componentes React compartilhados vivem em `client/src/components/ui/` (`Button`, `Input`, `Field`, `Card`, `Badge`, `Banner`, `Skeleton`) e são reexportados via o barrel `index.ts`. Importe sempre pelo barrel:
+
+```tsx
+import { Button, Field, Card, Badge, Banner, Skeleton } from '../components/ui'
+import type { ButtonProps } from '../components/ui'
+```
+
+Princípios:
+- Estilos são classes `.ui-*` globais em `client/src/index.css` consumindo exclusivamente tokens — nada de CSS Modules/styled-components.
+- Props tipadas com `import type`; componentes que precisam de spread nativo (Button, Input) estendem `HTMLAttributes<Element>`.
+- `Button` com `loading=true` mostra spinner **sem apagar o label original** (UX deliberada); define `aria-busy` + `disabled` enquanto loading.
+- `Input` aplica `font-size: 16px` no mobile para evitar o auto-zoom do iOS; em viewports ≥640px cai para `--text-sm`.
+- `Field` usa `useId()` como fallback para o `id` e liga `aria-describedby` à mensagem de erro/hint ativa. `error` precede `hint`.
+- `Banner` troca `role="status"` (polite, default) por `role="alert"` (assertive) via prop `assertive` — reserve assertive para erros que precisam interromper.
+- `Skeleton` aceita qualquer CSS em `width`/`height` e um flag `rounded` para círculos (avatar). Use para espelhar o layout final e prevenir CLS.
+
+**Esta iteração (US-031) apenas criou a biblioteca — páginas ainda usam suas classes legadas (`auth-form`, `historico-*`, etc.)**. Histórias de redesign (US-035+) vão migrar páginas para consumir esta biblioteca em vez de replicar markup/CSS.
+
 ## Design tokens (US-028)
 Fonte única em `client/src/styles/tokens.css` (importado **antes** de `index.css` em `main.tsx`). Tema light + override completo via `@media (prefers-color-scheme: dark)`. Documentação tabular (paleta + escalas) em `client/src/styles/README.md`. Direção: **Emerald (`--brand-*`) + Tangerine (`--accent-*`) sobre Slate frio**; nunca preto puro (dark `--bg = #0F172A`). Convenção: `--text` = headline (`#0F172A`), `--text-muted` = body, `--text-subtle` = hints (invertido do esquema antigo `--text-h`/`--text`). Severidades de recomendação têm tokens dedicados `--severity-{critico,atencao,informativo}-{bg,border,text}` separados das semânticas genéricas (`--success/warning/danger/info`). Sempre consuma `var(--token)` em CSS — proibido hex/rgba hard-coded em `index.css` ou em estilos por página/componente.
 

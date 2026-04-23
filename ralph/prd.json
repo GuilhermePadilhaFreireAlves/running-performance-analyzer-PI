@@ -542,7 +542,7 @@
         "npm run lint passa"
       ],
       "priority": 31,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
