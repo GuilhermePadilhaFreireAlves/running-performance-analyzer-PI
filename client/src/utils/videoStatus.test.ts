@@ -10,6 +10,8 @@ import {
   STATUS_PENDENTE,
   STATUS_VALIDANDO,
   errorMessageForStatus,
+  estimatedRemainingLabel,
+  formatElapsedTime,
   isErrorStatus,
   isFinalStatus,
   progressPercentFromStatus,
@@ -85,5 +87,43 @@ describe('isFinalStatus', () => {
     expect(isFinalStatus(STATUS_VALIDANDO)).toBe(false)
     expect(isFinalStatus(STATUS_DETECTANDO_POSE)).toBe(false)
     expect(isFinalStatus(STATUS_CALCULANDO)).toBe(false)
+  })
+})
+
+describe('formatElapsedTime', () => {
+  it('formats sub-minute elapsed as "Há N segundos"', () => {
+    expect(formatElapsedTime(0)).toBe('Há 1 segundo')
+    expect(formatElapsedTime(1)).toBe('Há 1 segundo')
+    expect(formatElapsedTime(12)).toBe('Há 12 segundos')
+    expect(formatElapsedTime(59)).toBe('Há 59 segundos')
+  })
+
+  it('formats whole minutes as "Há N minutos"', () => {
+    expect(formatElapsedTime(60)).toBe('Há 1 minuto')
+    expect(formatElapsedTime(120)).toBe('Há 2 minutos')
+  })
+
+  it('combines minutes + seconds when both are non-zero', () => {
+    expect(formatElapsedTime(90)).toBe('Há 1 minuto e 30 segundos')
+    expect(formatElapsedTime(125)).toBe('Há 2 minutos e 5 segundos')
+    expect(formatElapsedTime(61)).toBe('Há 1 minuto e 1 segundo')
+  })
+
+  it('clamps negatives to zero', () => {
+    expect(formatElapsedTime(-5)).toBe('Há 1 segundo')
+  })
+})
+
+describe('estimatedRemainingLabel', () => {
+  it('decreases with elapsed time', () => {
+    const early = estimatedRemainingLabel(0)
+    const mid = estimatedRemainingLabel(15)
+    expect(early).toBe('~35s restantes')
+    expect(mid).toBe('~20s restantes')
+  })
+
+  it('never drops below 5 seconds', () => {
+    expect(estimatedRemainingLabel(60)).toBe('~5s restantes')
+    expect(estimatedRemainingLabel(999)).toBe('~5s restantes')
   })
 })

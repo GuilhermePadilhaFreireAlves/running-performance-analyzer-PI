@@ -17,10 +17,10 @@ export interface StatusStage {
 }
 
 export const STATUS_STAGES: readonly StatusStage[] = [
-  { key: STATUS_VALIDANDO, label: 'Validando perspectiva' },
-  { key: STATUS_DETECTANDO_POSE, label: 'Detectando pose com YOLOv8' },
+  { key: STATUS_VALIDANDO, label: 'Validando vídeo' },
+  { key: STATUS_DETECTANDO_POSE, label: 'Detectando pose' },
   { key: STATUS_CALCULANDO, label: 'Calculando métricas' },
-  { key: STATUS_CONCLUIDO, label: 'Concluído' },
+  { key: 'gerando_recomendacoes', label: 'Gerando recomendações' },
 ] as const
 
 const STAGE_INDEX_BY_STATUS: Record<string, number> = {
@@ -57,4 +57,25 @@ export function errorMessageForStatus(status: string): string | null {
 
 export function isFinalStatus(status: string): boolean {
   return status === STATUS_CONCLUIDO || isErrorStatus(status)
+}
+
+export function formatElapsedTime(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds))
+  if (total < 60) {
+    if (total <= 1) return 'Há 1 segundo'
+    return `Há ${total} segundos`
+  }
+  const minutes = Math.floor(total / 60)
+  const remainingSeconds = total % 60
+  const minuteLabel = minutes === 1 ? '1 minuto' : `${minutes} minutos`
+  if (remainingSeconds === 0) return `Há ${minuteLabel}`
+  const secondLabel =
+    remainingSeconds === 1 ? '1 segundo' : `${remainingSeconds} segundos`
+  return `Há ${minuteLabel} e ${secondLabel}`
+}
+
+export function estimatedRemainingLabel(elapsedSeconds: number): string {
+  const ESTIMATED_TOTAL_SECONDS = 35
+  const remaining = Math.max(5, ESTIMATED_TOTAL_SECONDS - Math.floor(elapsedSeconds))
+  return `~${remaining}s restantes`
 }
