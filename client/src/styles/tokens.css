@@ -1,0 +1,164 @@
+/* =============================================================================
+   tokens.css — Design tokens (PRD seções 18.2, 18.3, 18.4)
+   Direção: Emerald + Tangerine sobre Slate frio.
+   Light é o tema primário; dark é opt-in via prefers-color-scheme.
+   Nunca preto puro: o "preto" do dark é slate-900 (#0F172A).
+   ============================================================================= */
+
+:root {
+  /* Brand (Emerald) */
+  --brand-50: #ECFDF5;
+  --brand-100: #D1FAE5;
+  --brand-500: #10B981;
+  --brand-600: #059669;
+  --brand-700: #047857;
+
+  /* Accent (Tangerine) */
+  --accent-50: #FFF7ED;
+  --accent-400: #FB923C;
+  --accent-500: #F97316;
+
+  /* Neutros (Slate frio) */
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-muted: #F1F5F9;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --text: #0F172A;
+  --text-muted: #475569;
+  --text-subtle: #94A3B8;
+  --text-on-brand: #FFFFFF;
+
+  /* Cores semânticas */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --warning-soft: #FEF3C7;
+  --warning-text: #78350F;
+  --danger: #EF4444;
+  --danger-soft: #FEF2F2;
+  --danger-text: #7F1D1D;
+  --info: #0EA5E9;
+
+  /* Severidades de recomendação */
+  --severity-critico-bg: #FEF2F2;
+  --severity-critico-border: #DC2626;
+  --severity-critico-text: #7F1D1D;
+  --severity-atencao-bg: #FFFBEB;
+  --severity-atencao-border: #D97706;
+  --severity-atencao-text: #78350F;
+  --severity-informativo-bg: #F0FDF4;
+  --severity-informativo-border: #059669;
+  --severity-informativo-text: #064E3B;
+
+  /* Tipografia */
+  --font-display: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 28px;
+  --text-display: 40px;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+
+  /* Espaçamento (escala 4px) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Raios (concêntricos, child <= parent) */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
+
+  /* Sombras (ambient + direct, 2 camadas) */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 8px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 24px rgba(15, 23, 42, 0.10), 0 4px 8px rgba(15, 23, 42, 0.06);
+  --shadow-focus: 0 0 0 3px rgba(16, 185, 129, 0.35);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  color-scheme: light dark;
+}
+
+/* =============================================================================
+   Tema escuro (opt-in via prefers-color-scheme).
+   Brand/accent ficam mais claros para preservar contraste sobre slate.
+   ============================================================================= */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0F172A;
+    --surface: #1E293B;
+    --surface-raised: #1E293B;
+    --surface-muted: #1E293B;
+    --border: #334155;
+    --border-strong: #475569;
+    --text: #F8FAFC;
+    --text-muted: #CBD5E1;
+    --text-subtle: #94A3B8;
+    --text-on-brand: #052E1B;
+
+    --brand-50: #064E3B;
+    --brand-100: #065F46;
+    --brand-500: #34D399;
+    --brand-600: #6EE7B7;
+    --brand-700: #A7F3D0;
+
+    --accent-50: #431407;
+    --accent-400: #FDBA74;
+    --accent-500: #FB923C;
+
+    --success: #34D399;
+    --warning: #FBBF24;
+    --warning-soft: #422006;
+    --warning-text: #FCD34D;
+    --danger: #F87171;
+    --danger-soft: #450A0A;
+    --danger-text: #FCA5A5;
+    --info: #38BDF8;
+
+    --severity-critico-bg: #2A0F12;
+    --severity-critico-border: #EF4444;
+    --severity-critico-text: #FCA5A5;
+    --severity-atencao-bg: #2A1A05;
+    --severity-atencao-border: #F59E0B;
+    --severity-atencao-text: #FCD34D;
+    --severity-informativo-bg: #052E1B;
+    --severity-informativo-border: #34D399;
+    --severity-informativo-text: #A7F3D0;
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.40), 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.40), 0 2px 4px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.25);
+    --shadow-focus: 0 0 0 3px rgba(52, 211, 153, 0.45);
+  }
+}
