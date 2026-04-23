@@ -29,6 +29,348 @@
   box-sizing: border-box;
 }
 
+/* =============================================================================
+   App Shell (US-029) — top nav fixa + drawer mobile + footer + skip link.
+   ============================================================================= */
+
+.skip-link {
+  position: absolute;
+  inset-inline-start: var(--space-3);
+  inset-block-start: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--brand-500);
+  color: var(--text-on-brand);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  z-index: 1000;
+  transform: translateY(-200%);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.app-shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-shell-header-inner {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+  max-width: 1280px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.app-shell-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--brand-600);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.app-shell-brand-name {
+  font-size: var(--text-lg);
+  letter-spacing: -0.2px;
+  color: var(--text);
+}
+
+.app-shell-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-start: var(--space-4);
+  flex: 1;
+}
+
+.app-shell-nav-link {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.app-shell-nav-link:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.app-shell-nav-link-active {
+  color: var(--brand-700);
+  background: var(--brand-50);
+}
+
+.app-shell-user {
+  position: relative;
+  margin-inline-start: auto;
+}
+
+.app-shell-user-button {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.app-shell-user-button:hover {
+  background: var(--surface-muted);
+}
+
+.app-shell-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--brand-500);
+  color: var(--text-on-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: 0.5px;
+}
+
+.app-shell-user-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline-end: 0;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  z-index: 110;
+}
+
+.app-shell-user-menu-name {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  padding: var(--space-1) var(--space-2);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.app-shell-user-menu-item {
+  font: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.app-shell-user-menu-item:hover {
+  background: var(--surface-muted);
+}
+
+.app-shell-hamburger {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-inline-start: auto;
+}
+
+.app-shell-hamburger-bar {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--text);
+  border-radius: var(--radius-full);
+}
+
+.app-shell-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 200;
+}
+
+.app-shell-drawer {
+  position: fixed;
+  top: 0;
+  inset-inline-end: 0;
+  width: min(320px, 85vw);
+  height: 100svh;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  z-index: 210;
+  transform: translateX(100%);
+  transition: transform var(--duration-base) var(--ease-standard);
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell-drawer-open {
+  transform: translateX(0);
+}
+
+.app-shell-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  min-height: 64px;
+  box-sizing: border-box;
+}
+
+.app-shell-drawer-close {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.app-shell-drawer-close:hover {
+  background: var(--surface-muted);
+}
+
+.app-shell-drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+.app-shell-drawer-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--text-base);
+  font-weight: 500;
+  text-decoration: none;
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.app-shell-drawer-link:hover {
+  background: var(--surface-muted);
+}
+
+.app-shell-drawer-link-active {
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+.app-shell-drawer-logout {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--danger);
+}
+
+.app-shell-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.app-shell-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell-main:focus {
+  outline: none;
+}
+
+.app-shell-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  margin-top: var(--space-12);
+}
+
+.app-shell-footer-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
+.app-shell-footer-link {
+  color: var(--brand-600);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.app-shell-footer-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 639px) {
+  .app-shell-nav,
+  .app-shell-user {
+    display: none;
+  }
+
+  .app-shell-hamburger {
+    display: inline-flex;
+  }
+}
+
 body {
   margin: 0;
 }

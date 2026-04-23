@@ -16,8 +16,10 @@ import {
   notaClassName,
   severidadeDisplay,
 } from '../utils/analysisDisplay'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function AnalysisPage() {
+  usePageTitle('Diagnóstico')
   const { id } = useParams<{ id: string }>()
   const [data, setData] = useState<AnalysisSimpleResponse | null>(null)
   const [loading, setLoading] = useState(true)

@@ -27,8 +27,10 @@ import {
   type ChartSpec,
   type FramePoint,
 } from '../utils/rawAnalysis'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function AnalysisRawPage() {
+  usePageTitle('Dados técnicos')
   const { id } = useParams<{ id: string }>()
   const [data, setData] = useState<AnalysisRawResponse | null>(null)
   const [loading, setLoading] = useState(true)
