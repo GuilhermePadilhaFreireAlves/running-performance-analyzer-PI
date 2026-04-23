@@ -499,7 +499,7 @@
         "Verify in browser em viewports 375px e 1440px"
       ],
       "priority": 29,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

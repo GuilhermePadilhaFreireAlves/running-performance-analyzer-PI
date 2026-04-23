@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { extractApiError } from '../api/errors'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const NIVEIS_EXPERIENCIA = [
   { value: '', label: 'Não informar' },
@@ -13,6 +14,7 @@ const NIVEIS_EXPERIENCIA = [
 ] as const
 
 export default function SignupPage() {
+  usePageTitle('Criar conta')
   const { signup, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 

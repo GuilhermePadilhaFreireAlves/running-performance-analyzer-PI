@@ -11,6 +11,7 @@ import type {
   VideoMetadata,
   VideoValidationResult,
 } from '../utils/videoValidation'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface VideoState {
   file: File | null
@@ -35,6 +36,7 @@ const EMPTY_VIDEO: VideoState = {
 }
 
 export default function UploadPage() {
+  usePageTitle('Nova análise')
   const [pace, setPace] = useState<PaceInputValue>(EMPTY_PACE)
   const [video, setVideo] = useState<VideoState>(EMPTY_VIDEO)
   const [submitting, setSubmitting] = useState(false)

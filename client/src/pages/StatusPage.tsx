@@ -12,6 +12,7 @@ import {
   stageIndexFromStatus,
   STATUS_CONCLUIDO,
 } from '../utils/videoStatus'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const POLL_INTERVAL_MS = 2000
 
@@ -28,6 +29,7 @@ const INITIAL_STATE: FetchState = {
 }
 
 export default function StatusPage() {
+  usePageTitle('Processando')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [state, setState] = useState<FetchState>(INITIAL_STATE)

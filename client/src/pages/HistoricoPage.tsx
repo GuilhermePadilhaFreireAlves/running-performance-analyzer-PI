@@ -17,8 +17,10 @@ import {
   statusBadge,
   totalPages,
 } from '../utils/historicoDisplay'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 export default function HistoricoPage() {
+  usePageTitle('Histórico')
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const page = parsePageParam(searchParams.get('page'))

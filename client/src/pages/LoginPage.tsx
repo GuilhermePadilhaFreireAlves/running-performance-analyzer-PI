@@ -3,12 +3,14 @@ import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { extractApiError } from '../api/errors'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface RedirectState {
   from?: string
 }
 
 export default function LoginPage() {
+  usePageTitle('Entrar')
   const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
