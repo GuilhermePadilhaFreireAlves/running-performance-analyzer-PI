@@ -120,15 +120,33 @@ function AnalysisRawSkeleton() {
 
 function HistoricoSkeleton() {
   return (
-    <ul className="loading-historico-list" aria-hidden="true">
-      {[0, 1, 2, 3, 4].map((i) => (
-        <li key={i} className="loading-historico-row">
-          <Skeleton width="30%" height="16px" />
-          <Skeleton width="25%" height="14px" />
-          <Skeleton width="80px" height="22px" />
-          <Skeleton width="60px" height="16px" />
-        </li>
-      ))}
-    </ul>
+    <div className="loading-historico" aria-hidden="true">
+      <div className="loading-historico-hero">
+        <div className="loading-historico-hero-stats">
+          <Skeleton width="120px" height="14px" />
+          <Skeleton width="180px" height="36px" />
+          <Skeleton width="200px" height="14px" />
+        </div>
+        <Skeleton width="220px" height="56px" />
+      </div>
+      <div className="loading-historico-filters">
+        <Skeleton width="80px" height="14px" />
+        <Skeleton width="240px" height="32px" />
+      </div>
+      <ul className="loading-historico-cards">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <li key={i} className="loading-historico-card">
+            <div className="loading-historico-card-row">
+              <Skeleton width="55%" height="16px" />
+              <Skeleton width="80px" height="22px" />
+            </div>
+            <div className="loading-historico-card-row">
+              <Skeleton width="35%" height="14px" />
+              <Skeleton width="60px" height="20px" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
