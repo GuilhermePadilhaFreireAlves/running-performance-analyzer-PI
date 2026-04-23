@@ -645,7 +645,7 @@
         "Verify in browser"
       ],
       "priority": 36,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

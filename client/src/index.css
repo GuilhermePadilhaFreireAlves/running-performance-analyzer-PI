@@ -762,6 +762,80 @@ code {
   }
 }
 
+/* Signup redesign (US-036) ------------------------------------------------ */
+.signup-card {
+  max-width: 520px;
+}
+
+.signup-form {
+  gap: var(--space-5);
+}
+
+.signup-fieldset {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.signup-legend {
+  padding: 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.signup-fieldset-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.signup-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+@media (min-width: 640px) {
+  .signup-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.signup-password {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.signup-password-toggle {
+  align-self: flex-end;
+  margin-top: calc(var(--space-1) * -1);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--brand-600);
+  background: transparent;
+  border: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.signup-password-toggle:hover {
+  color: var(--brand-700);
+  background: var(--brand-50);
+}
+
+.signup-password-toggle[aria-pressed='true'] {
+  color: var(--brand-700);
+}
+
 .pace-input {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
