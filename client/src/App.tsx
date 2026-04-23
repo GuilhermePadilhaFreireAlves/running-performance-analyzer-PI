@@ -23,6 +23,9 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <a className="skip-link" href="#main">
+          Pular para o conteúdo
+        </a>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />

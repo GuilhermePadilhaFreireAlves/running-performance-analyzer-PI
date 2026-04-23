@@ -72,7 +72,7 @@ export default function AnalysisRawPage() {
 
   if (!id) {
     return (
-      <main className="analysis-container">
+      <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Dados biomecânicos brutos</h1>
         <p className="form-error">Identificador de análise ausente.</p>
       </main>
@@ -81,7 +81,7 @@ export default function AnalysisRawPage() {
 
   if (loading) {
     return (
-      <main className="analysis-container">
+      <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Dados biomecânicos brutos</h1>
         <p className="analysis-loading">Carregando séries por frame…</p>
       </main>
@@ -90,7 +90,7 @@ export default function AnalysisRawPage() {
 
   if (error) {
     return (
-      <main className="analysis-container">
+      <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Dados biomecânicos brutos</h1>
         <p className="form-error">{error}</p>
         <p>
@@ -104,7 +104,7 @@ export default function AnalysisRawPage() {
 
   if (data.erro) {
     return (
-      <main className="analysis-container">
+      <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Dados biomecânicos brutos</h1>
         <p className="form-error">{data.erro}</p>
         <p className="analysis-actions">
@@ -117,7 +117,7 @@ export default function AnalysisRawPage() {
   }
 
   return (
-    <main className="analysis-container">
+    <main id="main" tabIndex={-1} className="analysis-container">
       <h1>Dados biomecânicos brutos</h1>
 
       <p className="analysis-feedback">

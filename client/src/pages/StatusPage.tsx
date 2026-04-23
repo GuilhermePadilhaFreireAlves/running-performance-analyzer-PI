@@ -80,7 +80,7 @@ export default function StatusPage() {
 
   if (!id) {
     return (
-      <main className="auth-container">
+      <main id="main" tabIndex={-1} className="auth-container">
         <h1>Status da análise</h1>
         <p className="form-error" role="alert">
           Sessão inválida — identificador ausente.
@@ -97,7 +97,7 @@ export default function StatusPage() {
   const showError = status !== null && isErrorStatus(status)
 
   return (
-    <main className="auth-container status-container">
+    <main id="main" tabIndex={-1} className="auth-container status-container">
       <h1>Processando seu vídeo</h1>
       <p className="status-subtitle">Sessão #{id}</p>
 

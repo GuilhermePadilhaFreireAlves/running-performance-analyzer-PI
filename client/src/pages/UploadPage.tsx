@@ -123,7 +123,7 @@ export default function UploadPage() {
   }
 
   return (
-    <main className="auth-container">
+    <main id="main" tabIndex={-1} className="auth-container">
       <h1>Upload de vídeo</h1>
       <form
         className="auth-form"

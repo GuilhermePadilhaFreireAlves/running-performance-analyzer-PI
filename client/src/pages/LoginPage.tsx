@@ -56,7 +56,7 @@ export default function LoginPage() {
     clientErrors[field] ?? fieldErrors[field]
 
   return (
-    <main className="auth-container">
+    <main id="main" tabIndex={-1} className="auth-container">
       <h1>Entrar</h1>
       <form onSubmit={handleSubmit} noValidate className="auth-form" aria-label="Formulário de login">
         <label className="field">

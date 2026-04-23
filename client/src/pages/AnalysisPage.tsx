@@ -52,7 +52,7 @@ export default function AnalysisPage() {
 
   if (!id) {
     return (
-      <main className="analysis-container">
+      <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
         <p className="form-error">Identificador de análise ausente.</p>
       </main>
@@ -61,7 +61,7 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <main className="analysis-container">
+      <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
         <p className="analysis-loading">Carregando análise…</p>
       </main>
@@ -70,7 +70,7 @@ export default function AnalysisPage() {
 
   if (error) {
     return (
-      <main className="analysis-container">
+      <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
         <p className="form-error">{error}</p>
         <p>
@@ -84,7 +84,7 @@ export default function AnalysisPage() {
 
   if (data.erro) {
     return (
-      <main className="analysis-container">
+      <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
         <p className="form-error">{data.erro}</p>
         <p className="analysis-actions">
@@ -100,7 +100,7 @@ export default function AnalysisPage() {
   const grupos = groupBySeveridade(data.recomendacoes)
 
   return (
-    <main className="analysis-container">
+    <main id="main" tabIndex={-1} className="analysis-container">
       <h1>Diagnóstico</h1>
 
       <section className={`analysis-nota-card ${notaClassName(data.nota_geral)}`}>

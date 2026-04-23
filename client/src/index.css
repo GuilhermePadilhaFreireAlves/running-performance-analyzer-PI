@@ -17,6 +17,42 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* =============================================================================
+   Acessibilidade base (US-030).
+   - Anel de foco consistente via :focus-visible (teclado/A11y-APIs), nunca
+     remove o outline sem replacement visível.
+   - prefers-reduced-motion desliga transições/animações globalmente.
+   - scroll-margin-top compensa a top nav fixa (64px + folga) para âncoras.
+   ============================================================================= */
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  scroll-margin-top: var(--space-16);
+}
+
+main[tabindex]:focus {
+  outline: none;
+}
+
 #root {
   width: 1126px;
   max-width: 100%;
@@ -326,10 +362,6 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-.app-shell-main:focus {
-  outline: none;
 }
 
 .app-shell-footer {
