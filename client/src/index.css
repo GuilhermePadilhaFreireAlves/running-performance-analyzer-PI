@@ -1766,3 +1766,268 @@ code {
     width: 100%;
   }
 }
+
+/* =============================================================================
+   States (US-033) — Loading (skeletons), Empty e Error com recuperação.
+   LoadingState espelha o layout final (largura/altura fixos por elemento)
+   para prevenir CLS ao substituir skeleton → conteúdo.
+   ============================================================================= */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.loading-state {
+  width: 100%;
+}
+
+.loading-state > * + * {
+  margin-top: var(--space-4);
+}
+
+/* Status page skeleton */
+.loading-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.loading-status-stages {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.loading-status-stage {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Analysis page skeleton */
+.loading-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.loading-analysis-nota {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-8);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  max-width: 320px;
+  width: 100%;
+}
+
+.loading-analysis-section {
+  width: 100%;
+  margin-top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.loading-analysis-metric {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.loading-analysis-metric-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.loading-analysis-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Analysis raw page skeleton */
+.loading-analysis-raw {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.loading-raw-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .loading-raw-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.loading-raw-chart {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.loading-raw-asymmetry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.loading-raw-asymmetry-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.loading-raw-asymmetry-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Histórico page skeleton */
+.loading-historico-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.loading-historico-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+/* Empty state -------------------------------------------------------------- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.empty-state-illustration {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state-title {
+  font-size: var(--text-xl);
+  color: var(--text);
+  margin: 0;
+}
+
+.empty-state-description {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  max-width: 46ch;
+  margin: 0;
+}
+
+.empty-state-action {
+  margin-top: var(--space-2);
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Error state -------------------------------------------------------------- */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.error-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-state-title {
+  font-size: var(--text-xl);
+  color: var(--text);
+  margin: 0;
+}
+
+.error-state-message {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  max-width: 52ch;
+  margin: 0;
+}
+
+.error-state-actions {
+  margin-top: var(--space-3);
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.error-state-back-link {
+  color: var(--brand-600);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: underline;
+}
+
+.error-state-back-link:hover {
+  color: var(--brand-700);
+}

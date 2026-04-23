@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   getSimpleAnalysisRequest,
@@ -18,7 +18,7 @@ import {
 } from '../utils/analysisDisplay'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useToast } from '../context/ToastContext'
-import { Banner } from '../components/ui'
+import { ErrorState, LoadingState } from '../components/ui'
 
 export default function AnalysisPage() {
   usePageTitle('Diagnóstico')
@@ -27,6 +27,7 @@ export default function AnalysisPage() {
   const [data, setData] = useState<AnalysisSimpleResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (!id) return
@@ -53,15 +54,19 @@ export default function AnalysisPage() {
     return () => {
       cancelled = true
     }
-  }, [id, toast])
+  }, [id, retryCount, toast])
+
+  const handleRetry = useCallback(() => setRetryCount((c) => c + 1), [])
 
   if (!id) {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
-        <Banner variant="danger" assertive>
-          Identificador de análise ausente.
-        </Banner>
+        <ErrorState
+          title="Análise não encontrada"
+          message="O identificador da análise não foi informado."
+          backTo={{ to: '/historico', label: 'Voltar ao histórico' }}
+        />
       </main>
     )
   }
@@ -70,7 +75,7 @@ export default function AnalysisPage() {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
-        <p className="analysis-loading">Carregando análise…</p>
+        <LoadingState variant="analysis" label="Carregando análise" />
       </main>
     )
   }
@@ -79,12 +84,11 @@ export default function AnalysisPage() {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
-        <p className="analysis-empty">Não foi possível carregar. Tente novamente.</p>
-        <p className="analysis-actions">
-          <Link to="/historico" className="analysis-primary-link">
-            Voltar ao histórico
-          </Link>
-        </p>
+        <ErrorState
+          message={error}
+          onRetry={handleRetry}
+          backTo={{ to: '/historico', label: 'Voltar ao histórico' }}
+        />
       </main>
     )
   }
@@ -95,14 +99,11 @@ export default function AnalysisPage() {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Diagnóstico</h1>
-        <Banner variant="danger" assertive>
-          {data.erro}
-        </Banner>
-        <p className="analysis-actions">
-          <Link to="/upload" className="analysis-primary-link">
-            Enviar novo vídeo
-          </Link>
-        </p>
+        <ErrorState
+          title="Não foi possível analisar este vídeo"
+          message={data.erro}
+          backTo={{ to: '/upload', label: 'Enviar novo vídeo' }}
+        />
       </main>
     )
   }
