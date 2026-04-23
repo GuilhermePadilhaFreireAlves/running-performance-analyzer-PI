@@ -14,7 +14,7 @@ import {
 } from '../utils/videoStatus'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useToast } from '../context/ToastContext'
-import { Banner } from '../components/ui'
+import { ErrorState, LoadingState } from '../components/ui'
 
 const POLL_INTERVAL_MS = 2000
 
@@ -88,9 +88,11 @@ export default function StatusPage() {
     return (
       <main id="main" tabIndex={-1} className="auth-container">
         <h1>Status da análise</h1>
-        <Banner variant="danger" assertive>
-          Sessão inválida — identificador ausente.
-        </Banner>
+        <ErrorState
+          title="Sessão inválida"
+          message="O identificador da sessão não foi informado."
+          backTo={{ to: '/upload', label: 'Enviar novo vídeo' }}
+        />
       </main>
     )
   }
@@ -108,22 +110,15 @@ export default function StatusPage() {
       <p className="status-subtitle">Sessão #{id}</p>
 
       {state.loading && state.status === null ? (
-        <p className="upload-info">Consultando status…</p>
+        <LoadingState variant="status" label="Consultando status" />
       ) : null}
 
       {showError && errorMessage ? (
-        <div className="status-error">
-          <Banner variant="danger" assertive>
-            {errorMessage}
-          </Banner>
-          <button
-            type="button"
-            className="status-restart-button"
-            onClick={() => navigate('/upload')}
-          >
-            Enviar novo vídeo
-          </button>
-        </div>
+        <ErrorState
+          title="Não foi possível concluir a análise"
+          message={errorMessage}
+          backTo={{ to: '/upload', label: 'Enviar novo vídeo' }}
+        />
       ) : (
         <>
           <div

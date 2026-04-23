@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   getHistoricoRequest,
   type HistoricoItem,
@@ -19,6 +19,7 @@ import {
 } from '../utils/historicoDisplay'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useToast } from '../context/ToastContext'
+import { Button, EmptyState, ErrorState, LoadingState } from '../components/ui'
 
 export default function HistoricoPage() {
   usePageTitle('Histórico')
@@ -30,6 +31,7 @@ export default function HistoricoPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedErrorId, setSelectedErrorId] = useState<number | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -55,7 +57,9 @@ export default function HistoricoPage() {
     return () => {
       cancelled = true
     }
-  }, [page, toast])
+  }, [page, retryCount, toast])
+
+  const handleRetry = useCallback(() => setRetryCount((c) => c + 1), [])
 
   const goToPage = (target: number) => {
     const next = new URLSearchParams(searchParams)
@@ -84,20 +88,26 @@ export default function HistoricoPage() {
     <main id="main" tabIndex={-1} className="historico-container">
       <h1>Histórico de análises</h1>
 
-      {loading && <p className="historico-loading">Carregando histórico…</p>}
+      {loading && <LoadingState variant="historico" label="Carregando histórico" />}
 
       {error && !loading && (
-        <p className="historico-loading">Não foi possível carregar. Tente novamente.</p>
+        <ErrorState
+          message={error}
+          onRetry={handleRetry}
+          backTo={{ to: '/upload', label: 'Enviar novo vídeo' }}
+        />
       )}
 
       {!loading && !error && data && data.items.length === 0 && (
-        <p className="historico-empty">
-          Você ainda não tem análises concluídas.{' '}
-          <Link to="/upload" className="historico-empty-link">
-            Envie seu primeiro vídeo
-          </Link>
-          .
-        </p>
+        <EmptyState
+          title="Sem análises por aqui ainda"
+          description="Envie seu primeiro vídeo para ver o diagnóstico biomecânico e acompanhar sua evolução."
+          action={
+            <Button onClick={() => navigate('/upload')}>
+              Enviar primeiro vídeo
+            </Button>
+          }
+        />
       )}
 
       {!loading && !error && data && data.items.length > 0 && (

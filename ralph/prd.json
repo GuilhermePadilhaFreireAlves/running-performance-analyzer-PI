@@ -581,7 +581,7 @@
         "Verify in browser simulando slow-3G no DevTools que skeletons aparecem por >=1s sem layout shift"
       ],
       "priority": 33,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
