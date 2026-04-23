@@ -38,6 +38,14 @@ Princípios:
 
 **US-031 criou a biblioteca e US-033 padronizou os estados de carregamento/vazio/erro — as 4 páginas principais (Status, Analysis, AnalysisRaw, Histórico) já consomem `LoadingState`/`ErrorState`/`EmptyState`. Histórias de redesign (US-035+) migram o restante do layout para `Button`/`Field`/`Card`/etc.**
 
+## Responsividade mobile-first (US-034)
+- `#root` é o contêiner global: `max-width: 1280px; margin-inline: auto; padding-inline` escalando de `var(--space-4)` (<640px) → `var(--space-5)` (≥640px) → `var(--space-8)` (≥1024px). Não reintroduzir `width`/`border-inline` no `#root` — o chrome visual é responsabilidade da top nav + páginas.
+- Breakpoints canônicos estão em `tokens.css`: `--bp-sm: 640px`, `--bp-md: 768px`, `--bp-lg: 1024px`, `--bp-xl: 1280px`. CSS não resolve `var()` em `@media`, então repita o literal (`@media (min-width: 640px)`) — o token serve de referência para quem lê.
+- Safe areas: `.app-shell-header` aplica `padding-top/left/right: env(safe-area-inset-*)`. Qualquer nova barra fixa no topo (banner de sessão, wizard) deve fazer o mesmo, senão o notch do iPhone corta o conteúdo.
+- Globals já instalados em `index.css`: `html { -webkit-tap-highlight-color: rgba(16,185,129,0.15) }`, `button/a/[role=button]/summary/label { touch-action: manipulation }`, `input/select/textarea { font-size: 16px }` (cai para `--text-sm` em ≥640px). Isso previne o auto-zoom do iOS e remove o delay de 300ms.
+- Hit targets ≥ 44px no mobile — aplique `min-height: 44px` em qualquer novo controle interativo (inputs de formulário, botões de navegação/paginação). Padrão instalado para `.auth-form input/select`, `.historico-pagination-button`, `.historico-item-button`, `.ui-input`, `.ui-button-md` (via `@media max-width: 639px`), `.status-restart-button`, `.auth-form button[type=submit]`, `.analysis-primary-link`.
+- Viewport meta (`client/index.html`): apenas `width=device-width, initial-scale=1.0`. **Nunca** adicione `user-scalable=no` ou `maximum-scale=1` — quebra acessibilidade e é proibido pela US-034/PRD.
+
 ## Design tokens (US-028)
 Fonte única em `client/src/styles/tokens.css` (importado **antes** de `index.css` em `main.tsx`). Tema light + override completo via `@media (prefers-color-scheme: dark)`. Documentação tabular (paleta + escalas) em `client/src/styles/README.md`. Direção: **Emerald (`--brand-*`) + Tangerine (`--accent-*`) sobre Slate frio**; nunca preto puro (dark `--bg = #0F172A`). Convenção: `--text` = headline (`#0F172A`), `--text-muted` = body, `--text-subtle` = hints (invertido do esquema antigo `--text-h`/`--text`). Severidades de recomendação têm tokens dedicados `--severity-{critico,atencao,informativo}-{bg,border,text}` separados das semânticas genéricas (`--success/warning/danger/info`). Sempre consuma `var(--token)` em CSS — proibido hex/rgba hard-coded em `index.css` ou em estilos por página/componente.
 

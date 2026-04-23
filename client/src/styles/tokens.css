@@ -106,6 +106,13 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
 
+  /* Breakpoints (referência para @media; valores duplicados nas queries
+     porque CSS não resolve var() dentro de @media). */
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+
   color-scheme: light dark;
 }
 
