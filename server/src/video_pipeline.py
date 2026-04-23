@@ -13,7 +13,7 @@ from server.src.models.sessao_analise import SessaoAnalise
 
 logger = logging.getLogger(__name__)
 
-FPS_MINIMO = 60.0
+FPS_MINIMO = 20.0
 PACE_MIN = 3.0
 PACE_MAX = 12.0
 RAZAO_LATERAL_MAXIMA = 0.30

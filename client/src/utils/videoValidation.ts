@@ -1,8 +1,8 @@
-export const VIDEO_MIN_DURATION_SEC = 30
+export const VIDEO_MIN_DURATION_SEC = 6
 export const VIDEO_MAX_DURATION_SEC = 180
 export const VIDEO_MIN_WIDTH = 640
 export const VIDEO_MIN_HEIGHT = 480
-export const VIDEO_MIN_FPS = 60
+export const VIDEO_MIN_FPS = 20
 
 export const VIDEO_TOO_SHORT_MESSAGE =
   'Vídeo muito curto — grave pelo menos 30 segundos de corrida contínua'
