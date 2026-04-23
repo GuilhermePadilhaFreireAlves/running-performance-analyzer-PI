@@ -9,15 +9,30 @@ import {
   STATUS_VALIDANDO,
 } from './videoStatus'
 import {
+  averageNota,
   errorReasonForStatus,
+  filterItems,
+  FILTRO_STATUS_CONCLUIDO,
+  FILTRO_STATUS_ERRO,
+  FILTRO_STATUS_TODOS,
   formatCriadoEm,
+  formatNotaAverage,
   formatNotaGeral,
   formatPaceMinKm,
+  formatTrendDelta,
   isConcluido,
   isProcessing,
+  notaTrendDelta,
   parsePageParam,
+  parsePeriodoParam,
+  parseStatusFilterParam,
+  PERIODO_30D,
+  PERIODO_7D,
+  PERIODO_TODOS,
+  sparklinePoints,
   statusBadge,
   totalPages,
+  trendDirection,
 } from './historicoDisplay'
 
 describe('statusBadge', () => {
@@ -151,5 +166,152 @@ describe('totalPages', () => {
 
   it('handles zero limit defensively', () => {
     expect(totalPages(10, 0)).toBe(1)
+  })
+})
+
+describe('parsePeriodoParam', () => {
+  it('accepts known periods', () => {
+    expect(parsePeriodoParam('7d')).toBe(PERIODO_7D)
+    expect(parsePeriodoParam('30d')).toBe(PERIODO_30D)
+    expect(parsePeriodoParam('todos')).toBe(PERIODO_TODOS)
+  })
+
+  it('falls back to "todos" for null or unknown values', () => {
+    expect(parsePeriodoParam(null)).toBe(PERIODO_TODOS)
+    expect(parsePeriodoParam('')).toBe(PERIODO_TODOS)
+    expect(parsePeriodoParam('ontem')).toBe(PERIODO_TODOS)
+  })
+})
+
+describe('parseStatusFilterParam', () => {
+  it('accepts known filters', () => {
+    expect(parseStatusFilterParam('concluido')).toBe(FILTRO_STATUS_CONCLUIDO)
+    expect(parseStatusFilterParam('erro')).toBe(FILTRO_STATUS_ERRO)
+  })
+
+  it('falls back to "todos" for anything else', () => {
+    expect(parseStatusFilterParam(null)).toBe(FILTRO_STATUS_TODOS)
+    expect(parseStatusFilterParam('xyz')).toBe(FILTRO_STATUS_TODOS)
+  })
+})
+
+describe('filterItems', () => {
+  const now = new Date('2026-04-22T12:00:00.000Z')
+  const items = [
+    {
+      id: 1,
+      criado_em: '2026-04-22T10:00:00.000Z',
+      status: STATUS_CONCLUIDO,
+      nota_geral: 8.5,
+    },
+    {
+      id: 2,
+      criado_em: '2026-04-17T09:00:00.000Z',
+      status: STATUS_CONCLUIDO,
+      nota_geral: 7.2,
+    },
+    {
+      id: 3,
+      criado_em: '2026-04-01T09:00:00.000Z',
+      status: STATUS_ERRO_KEYPOINTS,
+      nota_geral: null,
+    },
+    {
+      id: 4,
+      criado_em: '2026-02-01T09:00:00.000Z',
+      status: STATUS_CONCLUIDO,
+      nota_geral: 6.1,
+    },
+  ]
+
+  it('keeps only items within the last 7 days', () => {
+    const result = filterItems(items, PERIODO_7D, FILTRO_STATUS_TODOS, now)
+    expect(result.map((i) => i.id)).toEqual([1, 2])
+  })
+
+  it('keeps only items within the last 30 days', () => {
+    const result = filterItems(items, PERIODO_30D, FILTRO_STATUS_TODOS, now)
+    expect(result.map((i) => i.id)).toEqual([1, 2, 3])
+  })
+
+  it('returns everything when periodo is "todos" and filter is "todos"', () => {
+    const result = filterItems(items, PERIODO_TODOS, FILTRO_STATUS_TODOS, now)
+    expect(result.map((i) => i.id)).toEqual([1, 2, 3, 4])
+  })
+
+  it('combines periodo + status filter', () => {
+    const result = filterItems(items, PERIODO_30D, FILTRO_STATUS_CONCLUIDO, now)
+    expect(result.map((i) => i.id)).toEqual([1, 2])
+  })
+
+  it('keeps error items when status=erro', () => {
+    const result = filterItems(items, PERIODO_TODOS, FILTRO_STATUS_ERRO, now)
+    expect(result.map((i) => i.id)).toEqual([3])
+  })
+})
+
+describe('sparklinePoints', () => {
+  it('keeps only concluidos with a nota and orders chronologically ascending', () => {
+    const pts = sparklinePoints([
+      { criado_em: '2026-04-22T10:00:00.000Z', status: STATUS_CONCLUIDO, nota_geral: 8 },
+      { criado_em: '2026-04-20T10:00:00.000Z', status: STATUS_CONCLUIDO, nota_geral: 7 },
+      { criado_em: '2026-04-21T10:00:00.000Z', status: STATUS_ERRO_KEYPOINTS, nota_geral: null },
+      { criado_em: '2026-04-19T10:00:00.000Z', status: STATUS_CONCLUIDO, nota_geral: null },
+    ])
+    expect(pts.map((p) => p.nota)).toEqual([7, 8])
+    expect(pts[0].idx).toBe(0)
+    expect(pts[1].idx).toBe(1)
+  })
+})
+
+describe('averageNota / notaTrendDelta', () => {
+  const items = [
+    { criado_em: '2026-04-22T10:00:00.000Z', status: STATUS_CONCLUIDO, nota_geral: 8 },
+    { criado_em: '2026-04-20T10:00:00.000Z', status: STATUS_CONCLUIDO, nota_geral: 6 },
+    { criado_em: '2026-04-15T10:00:00.000Z', status: STATUS_CONCLUIDO, nota_geral: 5 },
+    { criado_em: '2026-04-10T10:00:00.000Z', status: STATUS_CONCLUIDO, nota_geral: 4 },
+  ]
+
+  it('averageNota ignores non-concluidos and nulls', () => {
+    expect(averageNota(items)).toBeCloseTo(5.75)
+    expect(
+      averageNota([
+        { criado_em: '2026-01-01T00:00:00.000Z', status: STATUS_ERRO_KEYPOINTS, nota_geral: null },
+      ]),
+    ).toBeNull()
+  })
+
+  it('notaTrendDelta compares newer half vs older half', () => {
+    // older: 4, 5 → avg 4.5; newer: 6, 8 → avg 7 ⇒ delta +2.5
+    expect(notaTrendDelta(items)).toBeCloseTo(2.5)
+  })
+
+  it('returns null when less than 2 concluidos', () => {
+    expect(
+      notaTrendDelta([
+        { criado_em: '2026-04-22T10:00:00.000Z', status: STATUS_CONCLUIDO, nota_geral: 8 },
+      ]),
+    ).toBeNull()
+  })
+})
+
+describe('formatNotaAverage / formatTrendDelta / trendDirection', () => {
+  it('formats average with one decimal', () => {
+    expect(formatNotaAverage(7.24)).toBe('7.2')
+    expect(formatNotaAverage(null)).toBe('—')
+  })
+
+  it('formats trend with sign prefix', () => {
+    expect(formatTrendDelta(0.8)).toBe('+0.8')
+    expect(formatTrendDelta(-1.2)).toBe('−1.2')
+    expect(formatTrendDelta(0)).toBe('±0.0')
+    expect(formatTrendDelta(null)).toBe('')
+  })
+
+  it('classifies trend direction with epsilon', () => {
+    expect(trendDirection(0.5)).toBe('up')
+    expect(trendDirection(-0.5)).toBe('down')
+    expect(trendDirection(0.01)).toBe('flat')
+    expect(trendDirection(null)).toBeNull()
   })
 })

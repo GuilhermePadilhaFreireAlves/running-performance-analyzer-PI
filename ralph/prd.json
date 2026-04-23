@@ -751,7 +751,7 @@
         "Verify in browser que filtros funcionam, URL atualiza e voltar do diagnóstico restaura scroll"
       ],
       "priority": 41,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
