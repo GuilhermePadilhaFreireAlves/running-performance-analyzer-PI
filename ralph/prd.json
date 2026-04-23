@@ -772,7 +772,7 @@
         "Verify in browser que animações são suaves e que prefers-reduced-motion desativa todas"
       ],
       "priority": 42,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

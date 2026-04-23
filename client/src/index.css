@@ -2214,7 +2214,6 @@ code {
 .raw-asymmetry-bar-fill {
   height: 100%;
   border-radius: var(--radius-full);
-  transition: width var(--duration-base) var(--ease-standard);
 }
 
 .raw-asymmetry-bar-fill.raw-asymmetry-ok {
@@ -2693,10 +2692,35 @@ code {
   cursor: pointer;
   text-decoration: none;
   box-sizing: border-box;
+  box-shadow: var(--shadow-xs);
+  transform: translateY(0);
   transition: background-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard),
     border-color var(--duration-fast) var(--ease-standard),
-    box-shadow var(--duration-fast) var(--ease-standard);
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.ui-button:hover:not(:disabled):not([aria-busy='true']) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.ui-button:active:not(:disabled):not([aria-busy='true']) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-xs);
+}
+
+.ui-button-ghost {
+  box-shadow: none;
+}
+
+.ui-button-ghost:hover:not(:disabled):not([aria-busy='true']) {
+  box-shadow: none;
+}
+
+.ui-button-ghost:active:not(:disabled):not([aria-busy='true']) {
+  box-shadow: none;
 }
 
 .ui-button:disabled,
@@ -2779,11 +2803,18 @@ code {
   display: inline-block;
   width: 1em;
   height: 1em;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: var(--radius-full);
-  animation: ui-spin 0.8s linear infinite;
   flex-shrink: 0;
+  color: currentColor;
+  animation: ui-spin 0.8s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+.ui-button-spinner-track {
+  opacity: 0.25;
+}
+
+.ui-button-spinner-arc {
+  opacity: 0.95;
 }
 
 .ui-button-label {
@@ -3537,4 +3568,44 @@ code {
 
 .error-state-back-link:hover {
   color: var(--brand-700);
+}
+
+/* =============================================================================
+   Microinterações e motion (US-042).
+   - .route-fade: transição suave entre rotas (fade puro, compositor-friendly).
+   - .list-enter: entrada escalonada (30ms por item) em listas de cards.
+     A página passa style={{ '--enter-index': idx }} para escalonar o delay.
+   - prefers-reduced-motion neutraliza ambas via o reset global em *,
+     que zera animation-duration — o estado final (opacity:1, translate:0)
+     é alcançado imediatamente.
+   ============================================================================= */
+.route-fade {
+  animation: route-fade-in var(--duration-base) var(--ease-out) both;
+  will-change: opacity;
+}
+
+@keyframes route-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.list-enter {
+  animation: list-enter-rise 280ms var(--ease-out) both;
+  animation-delay: calc(var(--enter-index, 0) * 30ms);
+  will-change: transform, opacity;
+}
+
+@keyframes list-enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
