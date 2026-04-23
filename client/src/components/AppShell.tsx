@@ -114,10 +114,6 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <>
-      <a className="skip-link" href="#main">
-        Pular para o conteúdo
-      </a>
-
       <header className="app-shell-header" role="banner">
         <div className="app-shell-header-inner">
           <Link to="/upload" className="app-shell-brand" aria-label={`${BRAND_NAME} — início`}>
@@ -237,9 +233,7 @@ export function AppShell({ children }: AppShellProps) {
       </aside>
 
       <div id="shell-root" className="app-shell-root">
-        <main id="main" className="app-shell-main" tabIndex={-1}>
-          {children}
-        </main>
+        <div className="app-shell-main">{children}</div>
         <footer className="app-shell-footer" role="contentinfo">
           <div className="app-shell-footer-inner">
             <span>

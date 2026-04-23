@@ -77,7 +77,7 @@ export default function HistoricoPage() {
   const hasNext = data !== null && page < pages
 
   return (
-    <main className="historico-container">
+    <main id="main" tabIndex={-1} className="historico-container">
       <h1>Histórico de análises</h1>
 
       {loading && <p className="historico-loading">Carregando histórico…</p>}
@@ -148,8 +148,9 @@ export default function HistoricoPage() {
               className="historico-pagination-button"
               onClick={() => goToPage(page - 1)}
               disabled={!hasPrev}
+              aria-label="Página anterior"
             >
-              ← Anterior
+              <span aria-hidden="true">←</span> Anterior
             </button>
             <span className="historico-pagination-info">
               Página {page} de {pages}
@@ -159,8 +160,9 @@ export default function HistoricoPage() {
               className="historico-pagination-button"
               onClick={() => goToPage(page + 1)}
               disabled={!hasNext}
+              aria-label="Próxima página"
             >
-              Próxima →
+              Próxima <span aria-hidden="true">→</span>
             </button>
           </nav>
         </>

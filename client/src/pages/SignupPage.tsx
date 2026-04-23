@@ -95,7 +95,7 @@ export default function SignupPage() {
     clientErrors[field] ?? fieldErrors[field]
 
   return (
-    <main className="auth-container">
+    <main id="main" tabIndex={-1} className="auth-container">
       <h1>Criar conta</h1>
       <form
         onSubmit={handleSubmit}

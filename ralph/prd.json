@@ -519,7 +519,7 @@
         "Verify in browser que navegação por teclado (Tab, Shift+Tab, Enter, Escape em modais) funciona em todas as telas"
       ],
       "priority": 30,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
