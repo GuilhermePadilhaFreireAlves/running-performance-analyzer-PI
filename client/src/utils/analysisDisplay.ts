@@ -44,10 +44,34 @@ export function notaClassName(nota: number | null): string {
   return 'nota-bad'
 }
 
+// Classificação textual do hero da tela de diagnóstico (US-039). Os limiares
+// seguem a mesma escala usada na cor do anel: verde >= 7, âmbar 5–7, vermelho
+// < 5. A faixa 4–5 é ainda `nota-ok` em `notaClassName` (para manter a
+// compatibilidade com os cartões de recomendação), mas no hero tratamos
+// < 5 como 'Atenção' conforme o PRD.
+export function notaClassification(nota: number | null): string {
+  if (nota === null || Number.isNaN(nota)) return '—'
+  if (nota >= 7) return 'Excelente'
+  if (nota >= 5) return 'Bom'
+  return 'Atenção'
+}
+
 export function formatNota(nota: number | null): string {
   if (nota === null || Number.isNaN(nota)) return '—'
   return nota.toFixed(1)
 }
+
+// Nome do ícone anatômico associado à métrica (ver componente
+// `MetricIcon`). Cada valor mapeia para um SVG inline.
+export type MetricIconName =
+  | 'joelho'
+  | 'cotovelo'
+  | 'tronco'
+  | 'passada'
+  | 'oscilacao'
+  | 'simetria'
+  | 'cadencia'
+  | 'tempo'
 
 export interface MetricaConfig {
   label: string
@@ -56,6 +80,8 @@ export interface MetricaConfig {
   idealMax: number
   chartMin: number
   chartMax: number
+  // Ícone renderizado ao lado do nome no card de métrica (US-039).
+  icon: MetricIconName
   // Transformação opcional do valor armazenado em Metrica.valor antes
   // de renderizar no gauge (ex: joelho armazenado como ângulo interno,
   // exibido como flexão = 180 - interno).
@@ -78,6 +104,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 25,
     chartMin: 0,
     chartMax: 60,
+    icon: 'joelho',
     transform: flexaoFromInterno,
   },
   angulo_joelho_dir: {
@@ -87,6 +114,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 25,
     chartMin: 0,
     chartMax: 60,
+    icon: 'joelho',
     transform: flexaoFromInterno,
   },
   angulo_cotovelo_esq: {
@@ -96,6 +124,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 110,
     chartMin: 30,
     chartMax: 180,
+    icon: 'cotovelo',
   },
   angulo_cotovelo_dir: {
     label: 'Ângulo do cotovelo (dir.)',
@@ -104,6 +133,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 110,
     chartMin: 30,
     chartMax: 180,
+    icon: 'cotovelo',
   },
   inclinacao_tronco: {
     label: 'Inclinação do tronco para frente',
@@ -112,6 +142,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 8,
     chartMin: -5,
     chartMax: 20,
+    icon: 'tronco',
   },
   overstriding_esq: {
     label: 'Overstriding (esq.)',
@@ -120,6 +151,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 5,
     chartMin: 0,
     chartMax: 25,
+    icon: 'passada',
     usaAbs: true,
   },
   overstriding_dir: {
@@ -129,6 +161,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 5,
     chartMin: 0,
     chartMax: 25,
+    icon: 'passada',
     usaAbs: true,
   },
   oscilacao_vertical: {
@@ -138,6 +171,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 10,
     chartMin: 0,
     chartMax: 20,
+    icon: 'oscilacao',
   },
   simetria_tcs: {
     label: 'Simetria — tempo de contato',
@@ -146,6 +180,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 5,
     chartMin: 0,
     chartMax: 30,
+    icon: 'simetria',
   },
   simetria_joelho: {
     label: 'Simetria — ângulo do joelho',
@@ -154,6 +189,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 5,
     chartMin: 0,
     chartMax: 30,
+    icon: 'simetria',
   },
   simetria_oscilacao: {
     label: 'Simetria — oscilação vertical',
@@ -162,6 +198,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 5,
     chartMin: 0,
     chartMax: 30,
+    icon: 'simetria',
   },
   cadencia: {
     label: 'Cadência (informativo)',
@@ -170,6 +207,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 185,
     chartMin: 140,
     chartMax: 210,
+    icon: 'cadencia',
     formatar: (v) => v.toFixed(0),
   },
   tcs_esq: {
@@ -179,6 +217,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 250,
     chartMin: 100,
     chartMax: 350,
+    icon: 'tempo',
     formatar: (v) => v.toFixed(0),
   },
   tcs_dir: {
@@ -188,6 +227,7 @@ export const METRIC_CONFIGS: Record<string, MetricaConfig> = {
     idealMax: 250,
     chartMin: 100,
     chartMax: 350,
+    icon: 'tempo',
     formatar: (v) => v.toFixed(0),
   },
 }

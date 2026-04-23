@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   getSimpleAnalysisRequest,
   type AnalysisSimpleResponse,
@@ -11,18 +11,27 @@ import {
   SEVERIDADE_INFORMATIVO,
   SEVERIDADE_ORDEM,
   buildMetricasVisuais,
-  formatNota,
   groupBySeveridade,
   notaClassName,
+  notaClassification,
   severidadeDisplay,
 } from '../utils/analysisDisplay'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useToast } from '../context/ToastContext'
-import { ErrorState, LoadingState } from '../components/ui'
+import { Banner, Button, ErrorState, LoadingState } from '../components/ui'
+import { NotaRing } from '../components/analysis/NotaRing'
+import { MetricIcon } from '../components/analysis/MetricIcon'
+
+const SEVERIDADE_TITULOS: Record<string, string> = {
+  [SEVERIDADE_CRITICO]: 'Pontos críticos',
+  [SEVERIDADE_ATENCAO]: 'Pontos de atenção',
+  [SEVERIDADE_INFORMATIVO]: 'Já está dentro do ideal',
+}
 
 export default function AnalysisPage() {
-  usePageTitle('Diagnóstico')
   const { id } = useParams<{ id: string }>()
+  usePageTitle(id ? `Diagnóstico #${id}` : 'Diagnóstico')
+  const navigate = useNavigate()
   const toast = useToast()
   const [data, setData] = useState<AnalysisSimpleResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -110,35 +119,47 @@ export default function AnalysisPage() {
 
   const visuais = buildMetricasVisuais(data.metricas_resumidas)
   const grupos = groupBySeveridade(data.recomendacoes)
+  const classification = notaClassification(data.nota_geral)
+  const notaColorClass = notaClassName(data.nota_geral)
 
   return (
     <main id="main" tabIndex={-1} className="analysis-container">
-      <h1>Diagnóstico</h1>
+      <h1 className="visually-hidden">Diagnóstico #{id}</h1>
 
-      <section className={`analysis-nota-card ${notaClassName(data.nota_geral)}`}>
-        <span className="analysis-nota-label">Nota geral</span>
-        <span className="analysis-nota-value">
-          {formatNota(data.nota_geral)}
-          <span className="analysis-nota-max">/10</span>
-        </span>
+      <section
+        className={`analysis-hero ${notaColorClass}`}
+        aria-label="Nota geral"
+      >
+        <NotaRing nota={data.nota_geral} classification={classification} />
+        <div className="analysis-hero-body">
+          <p className="analysis-hero-label">Nota geral</p>
+          <p className="analysis-hero-classification">{classification}</p>
+          {data.feedback_ia && (
+            <p className="analysis-hero-feedback">{data.feedback_ia}</p>
+          )}
+        </div>
       </section>
 
-      {data.feedback_ia && (
-        <p className="analysis-feedback">{data.feedback_ia}</p>
-      )}
-
       {visuais.length > 0 && (
-        <section className="analysis-section">
-          <h2>Métricas principais</h2>
-          <ul className="analysis-metric-list">
+        <section className="analysis-section" aria-labelledby="analysis-metrics-title">
+          <h2 id="analysis-metrics-title">Métricas principais</h2>
+          <ul className="analysis-metric-grid">
             {visuais.map((v) => (
-              <li key={v.tipo} className="analysis-metric">
-                <div className="analysis-metric-header">
-                  <span className="analysis-metric-label">{v.config.label}</span>
-                  <span className="analysis-metric-value">
-                    {v.gauge.displayValue}
+              <li key={v.tipo} className="analysis-metric-card">
+                <div className="analysis-metric-card-header">
+                  <span
+                    className="analysis-metric-card-icon"
+                    aria-hidden="true"
+                  >
+                    <MetricIcon name={v.config.icon} />
+                  </span>
+                  <span className="analysis-metric-card-label">
+                    {v.config.label}
                   </span>
                 </div>
+                <p className="analysis-metric-card-value">
+                  {v.gauge.displayValue}
+                </p>
                 <div className="analysis-gauge">
                   <div
                     className="analysis-gauge-ideal"
@@ -160,7 +181,7 @@ export default function AnalysisPage() {
                     {v.config.unidade}
                   </span>
                   <span className="analysis-gauge-ideal-label">
-                    faixa ideal: {v.config.idealMin}–{v.config.idealMax}
+                    ideal {v.config.idealMin}–{v.config.idealMax}
                     {v.config.unidade}
                   </span>
                   <span>
@@ -174,28 +195,40 @@ export default function AnalysisPage() {
         </section>
       )}
 
-      <section className="analysis-section">
-        <h2>Recomendações</h2>
+      <section
+        className="analysis-section"
+        aria-labelledby="analysis-recomendacoes-title"
+      >
+        <h2
+          id="analysis-recomendacoes-title"
+          className="analysis-section-title"
+        >
+          Recomendações
+        </h2>
         {data.recomendacoes.length === 0 ? (
-          <p className="analysis-empty">
-            Nenhuma recomendação gerada para esta sessão.
-          </p>
+          <Banner variant="success" title="Ótimo trabalho!">
+            Sua corrida está dentro de todos os parâmetros ideais — continue
+            assim.
+          </Banner>
         ) : (
           SEVERIDADE_ORDEM.map((sev) => {
             const lista = grupos[sev] ?? []
             if (lista.length === 0) return null
             const display = severidadeDisplay(sev)
-            const titulo =
-              sev === SEVERIDADE_CRITICO
-                ? 'Pontos críticos'
-                : sev === SEVERIDADE_ATENCAO
-                  ? 'Pontos de atenção'
-                  : sev === SEVERIDADE_INFORMATIVO
-                    ? 'Já está dentro do ideal'
-                    : display.label
+            const titulo = SEVERIDADE_TITULOS[sev] ?? display.label
             return (
               <div key={sev} className="analysis-severity-group">
                 <h3 className={`analysis-severity-title ${display.className}`}>
+                  <span
+                    className="analysis-severity-icon"
+                    aria-hidden="true"
+                  >
+                    {sev === SEVERIDADE_CRITICO
+                      ? '!'
+                      : sev === SEVERIDADE_ATENCAO
+                        ? '!'
+                        : '✓'}
+                  </span>
                   {titulo}
                 </h3>
                 <ul className="analysis-card-list">
@@ -220,14 +253,22 @@ export default function AnalysisPage() {
         )}
       </section>
 
-      <p className="analysis-actions">
-        <Link
-          to={`/analysis/${id}/raw`}
-          className="analysis-raw-link"
+      <footer className="analysis-footer">
+        <Button
+          variant="secondary"
+          size="md"
+          onClick={() => navigate('/historico')}
         >
-          Ver dados técnicos →
-        </Link>
-      </p>
+          Voltar ao histórico
+        </Button>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={() => navigate(`/analysis/${id}/raw`)}
+        >
+          Ver dados técnicos
+        </Button>
+      </footer>
     </main>
   )
 }
