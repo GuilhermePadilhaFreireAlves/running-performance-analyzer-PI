@@ -18,11 +18,13 @@ import {
   totalPages,
 } from '../utils/historicoDisplay'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useToast } from '../context/ToastContext'
 
 export default function HistoricoPage() {
   usePageTitle('Histórico')
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
+  const toast = useToast()
   const page = parsePageParam(searchParams.get('page'))
   const [data, setData] = useState<HistoricoResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -42,7 +44,9 @@ export default function HistoricoPage() {
       .catch((err: unknown) => {
         if (cancelled) return
         const { general } = extractApiError(err)
-        setError(general ?? 'Não foi possível carregar o histórico.')
+        const message = general ?? 'Não foi possível carregar o histórico.'
+        setError(message)
+        toast.error(message)
       })
       .finally(() => {
         if (cancelled) return
@@ -51,7 +55,7 @@ export default function HistoricoPage() {
     return () => {
       cancelled = true
     }
-  }, [page])
+  }, [page, toast])
 
   const goToPage = (target: number) => {
     const next = new URLSearchParams(searchParams)
@@ -83,7 +87,7 @@ export default function HistoricoPage() {
       {loading && <p className="historico-loading">Carregando histórico…</p>}
 
       {error && !loading && (
-        <p className="form-error">{error}</p>
+        <p className="historico-loading">Não foi possível carregar. Tente novamente.</p>
       )}
 
       {!loading && !error && data && data.items.length === 0 && (

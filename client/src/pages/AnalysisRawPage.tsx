@@ -28,10 +28,13 @@ import {
   type FramePoint,
 } from '../utils/rawAnalysis'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useToast } from '../context/ToastContext'
+import { Banner } from '../components/ui'
 
 export default function AnalysisRawPage() {
   usePageTitle('Dados técnicos')
   const { id } = useParams<{ id: string }>()
+  const toast = useToast()
   const [data, setData] = useState<AnalysisRawResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -50,7 +53,9 @@ export default function AnalysisRawPage() {
       .catch((err: unknown) => {
         if (cancelled) return
         const { general } = extractApiError(err)
-        setError(general ?? 'Não foi possível carregar os dados brutos.')
+        const message = general ?? 'Não foi possível carregar os dados brutos.'
+        setError(message)
+        toast.error(message)
       })
       .finally(() => {
         if (cancelled) return
@@ -59,7 +64,7 @@ export default function AnalysisRawPage() {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, toast])
 
   const points = useMemo<FramePoint[]>(
     () => (data?.frames ? buildFramePoints(data.frames) : []),
@@ -74,7 +79,9 @@ export default function AnalysisRawPage() {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Dados biomecânicos brutos</h1>
-        <p className="form-error">Identificador de análise ausente.</p>
+        <Banner variant="danger" assertive>
+          Identificador de análise ausente.
+        </Banner>
       </main>
     )
   }
@@ -92,9 +99,11 @@ export default function AnalysisRawPage() {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Dados biomecânicos brutos</h1>
-        <p className="form-error">{error}</p>
-        <p>
-          <Link to={`/analysis/${id}`}>Voltar ao diagnóstico simplificado</Link>
+        <p className="analysis-empty">Não foi possível carregar. Tente novamente.</p>
+        <p className="analysis-actions">
+          <Link to={`/analysis/${id}`} className="analysis-primary-link">
+            Voltar ao diagnóstico simplificado
+          </Link>
         </p>
       </main>
     )
@@ -106,7 +115,9 @@ export default function AnalysisRawPage() {
     return (
       <main id="main" tabIndex={-1} className="analysis-container">
         <h1>Dados biomecânicos brutos</h1>
-        <p className="form-error">{data.erro}</p>
+        <Banner variant="danger" assertive>
+          {data.erro}
+        </Banner>
         <p className="analysis-actions">
           <Link to="/upload" className="analysis-primary-link">
             Enviar novo vídeo
