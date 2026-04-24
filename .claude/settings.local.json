@@ -79,7 +79,13 @@
       "Bash(iptables -L INPUT -n)",
       "Bash(curl -s -o /dev/null -w \"GET /api/auth/login \\(esperado 405\\): HTTP %{http_code}\\\\n\" -X GET http://localhost:5173/api/auth/login)",
       "Bash(curl -s -o /dev/null -w \"POST / \\(raiz\\): HTTP %{http_code}\\\\n\" http://localhost:5173/)",
-      "Bash(sudo apt-get *)"
+      "Bash(sudo apt-get *)",
+      "Bash(chmod +x /workspace/ralph/ralph.sh)",
+      "Bash(gh auth *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(git fetch *)",
+      "Bash(awk '{print $2}')"
     ]
   }
 }
