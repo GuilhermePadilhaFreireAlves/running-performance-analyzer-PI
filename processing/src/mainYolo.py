@@ -1,6 +1,16 @@
 import math
+import os
 import time
+from typing import Sequence
+
 from ultralytics import YOLO
+
+# Maximiza uso de cores em inferência CPU (yolo26x em CPU é o gargalo aqui).
+try:
+    import torch
+    torch.set_num_threads(os.cpu_count() or 1)
+except ImportError:
+    pass
 
 # Mapeamento de keypoints do COCO para índices
 KEYPOINT_DICT = {
@@ -23,7 +33,9 @@ KEYPOINT_DICT = {
     'right_ankle': 16
 }
 
-def calcular_angulo(a, b, c):
+def calcular_angulo(
+    a: Sequence[float], b: Sequence[float], c: Sequence[float]
+) -> float:
     """Calcula o ângulo entre três pontos (em graus)."""
     angulo = math.degrees(math.atan2(c[1] - b[1], c[0] - b[0]) - math.atan2(a[1] - b[1], a[0] - b[0]))
     angulo = abs(angulo)
@@ -32,10 +44,19 @@ def calcular_angulo(a, b, c):
     return angulo
 
 # Carrega o modelo YOLO
-model = YOLO('yolo26x-pose.pt') 
+model = YOLO('yolo26x-pose.pt')
 
-# Executa a predição no vídeo
-results = model.predict(source='./run/profissional.mp4', save=True, show=True, stream=True)
+# Executa a predição no vídeo. `save=False` evita re-encodar o vídeo anotado
+# (custo gigantesco em CPU). `show=False` evita render da janela. `verbose=False`
+# remove o spam de logs por frame. `device='cpu'` evita autodetecção a cada call.
+results = model.predict(
+    source='./run/profissional.mp4',
+    stream=True,
+    save=False,
+    show=False,
+    verbose=False,
+    device='cpu',
+)
 
 # --- Variáveis para cálculo de cadência ---
 passos_contados = 0

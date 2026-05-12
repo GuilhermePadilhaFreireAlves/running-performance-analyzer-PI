@@ -13,6 +13,35 @@ from server.src.models.sessao_analise import SessaoAnalise
 
 logger = logging.getLogger(__name__)
 
+_torch_threads_configured = False
+
+
+def _configure_torch_threads() -> None:
+    """Maximiza o uso de cores em inferência CPU do PyTorch (no-op em GPU).
+
+    O default do torch no Windows costuma subutilizar a CPU em batch=1, que é
+    o regime do nosso pipeline frame-a-frame. Configura uma única vez.
+    """
+    global _torch_threads_configured
+    if _torch_threads_configured:
+        return
+    try:
+        import torch
+    except ImportError:
+        _torch_threads_configured = True
+        return
+    n = os.cpu_count() or 1
+    try:
+        torch.set_num_threads(n)
+    except Exception:  # pragma: no cover - defensivo
+        pass
+    try:
+        torch.set_num_interop_threads(1)
+    except (RuntimeError, AttributeError):
+        # set_num_interop_threads só pode ser chamado antes de qualquer op
+        pass
+    _torch_threads_configured = True
+
 FPS_MINIMO = 20.0
 PACE_MIN = 3.0
 PACE_MAX = 12.0
@@ -98,6 +127,7 @@ class DefaultVideoValidator:
     def is_lateral(self, video_path: str) -> bool:
         import cv2
 
+        _configure_torch_threads()
         cap = cv2.VideoCapture(video_path)
         try:
             if not cap.isOpened():
@@ -148,30 +178,42 @@ class DefaultPoseExtractor:
     def extract_keypoints(self, video_path: str) -> PoseExtractionResult:
         import cv2
 
+        _configure_torch_threads()
         model = _load_yolo_model(self.model_path)
         if model is None:
             raise RuntimeError("Modelo YOLO-pose indisponível")
 
         cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            cap.release()
-            raise RuntimeError(f"Não foi possível abrir o vídeo: {video_path}")
-
         try:
+            if not cap.isOpened():
+                raise RuntimeError(
+                    f"Não foi possível abrir o vídeo: {video_path}"
+                )
             fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-            raw_frames: list[FrameKeypoints] = []
-            frame_idx = 0
-            while True:
-                ok, frame = cap.read()
-                if not ok or frame is None:
-                    break
-                raw_frames.append(_predict_frame_keypoints(model, frame, frame_idx))
-                # libera o frame bruto imediatamente para evitar segurá-lo na memória
-                del frame
-                frame_idx += 1
         finally:
             cap.release()
+
+        predict = getattr(model, "predict", None)
+        if predict is None:
+            raise RuntimeError("Modelo YOLO sem método predict")
+
+        # Usa o pipeline nativo de vídeo do Ultralytics (stream=True) em vez
+        # de cv2.read() + predict por frame. Isso reduz drasticamente o
+        # overhead em CPU: o modelo é avaliado uma única vez, a decodificação
+        # de frames é feita pelo loader interno otimizado, e a iteração é
+        # lazy (não acumula tudo em memória). `device="cpu"` evita a
+        # autodetecção de GPU a cada chamada.
+        stream = predict(
+            source=video_path,
+            stream=True,
+            verbose=False,
+            device="cpu",
+        )
+        raw_frames: list[FrameKeypoints] = [
+            _keypoints_from_result(result, idx)
+            for idx, result in enumerate(stream)
+        ]
 
         smoothed = smooth_frames(raw_frames, window=SMOOTHING_WINDOW)
         low_quality = sum(1 for f in smoothed if _frame_is_low_quality(f))
@@ -215,7 +257,7 @@ def _shoulder_hip_ratio(model: object, frame: object) -> float | None:
     predict = getattr(model, "predict", None)
     if predict is None:
         return None
-    results = predict(source=frame, verbose=False)
+    results = predict(source=frame, verbose=False, device="cpu")
     if not results:
         return None
     kpts_obj = getattr(results[0], "keypoints", None)
@@ -246,25 +288,12 @@ def _shoulder_hip_ratio(model: object, frame: object) -> float | None:
     return max(shoulder_width, hip_width) / torso_height
 
 
-def _predict_frame_keypoints(
-    model: object, frame: object, frame_idx: int
-) -> FrameKeypoints:
-    """Roda YOLO-pose no frame e monta os 17 keypoints COCO filtrados por score."""
-    predict = getattr(model, "predict", None)
-    if predict is None:
-        return FrameKeypoints(
-            frame_idx=frame_idx,
-            person_count=0,
-            keypoints=[None] * NUM_KEYPOINTS,
-        )
-    results = predict(source=frame, verbose=False)
-    if not results:
-        return FrameKeypoints(
-            frame_idx=frame_idx,
-            person_count=0,
-            keypoints=[None] * NUM_KEYPOINTS,
-        )
-    kpts_obj = getattr(results[0], "keypoints", None)
+def _keypoints_from_result(result: object, frame_idx: int) -> FrameKeypoints:
+    """Converte um ultralytics ``Results`` em ``FrameKeypoints`` filtrado.
+
+    Reusada pelo loop streaming e pelo predict por-frame (`is_lateral`).
+    """
+    kpts_obj = getattr(result, "keypoints", None)
     if kpts_obj is None:
         return FrameKeypoints(
             frame_idx=frame_idx,
@@ -304,6 +333,27 @@ def _predict_frame_keypoints(
         person_count=person_count,
         keypoints=keypoints,
     )
+
+
+def _predict_frame_keypoints(
+    model: object, frame: object, frame_idx: int
+) -> FrameKeypoints:
+    """Roda YOLO-pose num único frame e converte para FrameKeypoints."""
+    predict = getattr(model, "predict", None)
+    if predict is None:
+        return FrameKeypoints(
+            frame_idx=frame_idx,
+            person_count=0,
+            keypoints=[None] * NUM_KEYPOINTS,
+        )
+    results = predict(source=frame, verbose=False, device="cpu")
+    if not results:
+        return FrameKeypoints(
+            frame_idx=frame_idx,
+            person_count=0,
+            keypoints=[None] * NUM_KEYPOINTS,
+        )
+    return _keypoints_from_result(results[0], frame_idx)
 
 
 def _coerce_score(conf_row: object, k: int) -> float | None:
