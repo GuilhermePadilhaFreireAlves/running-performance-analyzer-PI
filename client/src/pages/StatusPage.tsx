@@ -45,7 +45,7 @@ export default function StatusPage() {
   const timerRef = useRef<number | null>(null)
   const cancelledRef = useRef(false)
   const errorNotifiedRef = useRef<string | null>(null)
-  const startedAtRef = useRef<number>(Date.now())
+  const startedAtRef = useRef<number>(0)
 
   useEffect(() => {
     if (!id) return
@@ -88,6 +88,7 @@ export default function StatusPage() {
   }, [id, toast])
 
   useEffect(() => {
+    if (startedAtRef.current === 0) startedAtRef.current = Date.now()
     const tick = window.setInterval(() => {
       setElapsedSeconds(
         Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000)),

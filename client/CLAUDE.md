@@ -1,7 +1,7 @@
 # Frontend (client/) — notas para iterações futuras
 
 ## Stack
-Vite 8 + React 19 + TypeScript 6 (scaffolding `create-vite --template react-ts`). Dependências runtime: `react`, `react-dom`, `react-router-dom`, `axios`, `recharts` (apenas usado em `AnalysisRawPage` para séries por frame — já isolado num chunk lazy pelo code-splitting de rota; ver seção Performance).
+Vite 8 + React 19 + TypeScript 6 (scaffolding `create-vite --template react-ts`). Dependências runtime: `react`, `react-dom`, `react-router-dom`, `axios`, `recharts` (apenas usado em `AnalysisRawPage` para séries por frame — já isolado num chunk lazy pelo code-splitting de rota; ver seção Performance). Sem suíte de testes — não adicione vitest/jest.
 
 ## Performance e code-splitting (US-043)
 Todas as rotas privadas (Upload, Status, Analysis, AnalysisRaw, Historico) são `React.lazy()` + `<Suspense fallback={<LoadingState variant="...">}>` em `client/src/App.tsx`. Login/Signup ficam em import estático — landing sem chunk extra. Helper `privateElement(node, variant)` centraliza `PrivateRoute + AppShell + Suspense`. Rotas novas com layout próprio: considere adicionar uma nova `LoadingVariant` em `components/ui/states/LoadingState.tsx` se as 4 existentes (`status`/`analysis`/`analysis-raw`/`historico`) não espelharem bem. Bundle inicial meta: **< 250 KB gzipped** (atualmente ~97 KB). Recharts vive apenas em `AnalysisRawPage` — se uma nova rota precisar, mantenha o componente chart num arquivo próprio e chame `lazy()` lá (não importe `recharts` estático em nenhum outro lugar).
@@ -91,7 +91,6 @@ Sempre executar a partir de `client/`:
 - `npm run dev` — Vite dev server em `http://localhost:5173`.
 - `npm run build` — roda `tsc -b` + `vite build`. **Esse é o typecheck da história** (equivalente ao `mypy` do backend).
 - `npm run lint` — ESLint (opcional; não é bloqueador das histórias).
-- `npm test` — Vitest (executa `vitest run` em ambiente Node, sem JSDOM). Use para testes de utilitários puros em `src/utils/*.test.ts`.
 
 `tsconfig.app.json` tem `verbatimModuleSyntax: true` → sempre importe tipos com `import type { ... }`. Tem também `erasableSyntaxOnly: true` → não use `enum`/`namespace` (use objetos `as const`).
 
@@ -110,7 +109,7 @@ client/src/
   main.tsx         # entrypoint Vite
 ```
 
-Adicione novas páginas em `src/pages/<Nome>Page.tsx`, novas chamadas de API em `src/api/<recurso>.ts`, novos hooks em `src/hooks/` (criar ao precisar). Utilitários puros (testáveis sem DOM) ficam em `src/utils/<nome>.ts` e os testes ao lado em `src/utils/<nome>.test.ts` (Vitest, ambiente Node — não usa JSDOM).
+Adicione novas páginas em `src/pages/<Nome>Page.tsx`, novas chamadas de API em `src/api/<recurso>.ts`, novos hooks em `src/hooks/` (criar ao precisar). Utilitários puros ficam em `src/utils/<nome>.ts`.
 
 ## Convenções (já instaladas)
 - **Base URL**: `API_BASE_URL` em `src/api/client.ts` lê `import.meta.env.VITE_API_BASE_URL` com fallback `http://localhost:8000`. Override via `.env.local` em `client/` (veja `.env.example`).
@@ -130,10 +129,10 @@ Adicione novas páginas em `src/pages/<Nome>Page.tsx`, novas chamadas de API em 
 - Demais endpoints consumidos por histórias futuras: `GET /api/analysis/{id}/simple`, `GET /api/analysis/{id}/raw`, `GET /api/historico-analise?page=&limit=`.
 
 ## Validação de vídeo no cliente (US-023)
-- `src/utils/videoValidation.ts` exporta `validateVideoMetadata(meta)` (puro, testável em Node) com as constantes do PRD: `VIDEO_MIN_DURATION_SEC=30`, `VIDEO_MAX_DURATION_SEC=180`, `VIDEO_MIN_WIDTH=640`, `VIDEO_MIN_HEIGHT=480`, `VIDEO_MIN_FPS=60`. Mensagens em constantes (`VIDEO_TOO_SHORT_MESSAGE`, etc.) — qualquer tela futura que precise revalidar reusa daqui.
+- `src/utils/videoValidation.ts` exporta `validateVideoMetadata(meta)` (puro) com as constantes do PRD: `VIDEO_MIN_DURATION_SEC=30`, `VIDEO_MAX_DURATION_SEC=180`, `VIDEO_MIN_WIDTH=640`, `VIDEO_MIN_HEIGHT=480`, `VIDEO_MIN_FPS=60`. Mensagens em constantes (`VIDEO_TOO_SHORT_MESSAGE`, etc.) — qualquer tela futura que precise revalidar reusa daqui.
 - `src/utils/videoMeta.ts#readVideoMetadata(file)` lê duração/largura/altura via `<video>` em memória + `URL.createObjectURL`, e tenta estimar FPS via `requestVideoFrameCallback` (best-effort). `estimatedFps` pode ser `null` quando o browser não suporta a API ou o autoplay falha — neste caso a validação não emite warning de FPS (backend ainda valida definitivamente). Sempre revogar o object URL e chamar `video.load()` no cleanup.
 - `src/api/videos.ts#uploadVideoRequest({file, paceMinKm})` usa `FormData` (não JSON). O axios deixa o browser definir o `Content-Type: multipart/form-data; boundary=...` — não force header manual.
 
 ## Polling de status (US-024)
-- `src/utils/videoStatus.ts` (puro, testado em Node) exporta: `STATUS_*` constants, `STATUS_STAGES` (lista de 4 etapas para UI), `stageIndexFromStatus`, `progressPercentFromStatus`, `isErrorStatus`, `errorMessageForStatus`, `isFinalStatus`. Mensagens de erro (`ERROR_KEYPOINTS_MESSAGE`, `ERROR_MULTIPLAS_PESSOAS_MESSAGE`) expandem as do backend em texto amigável.
+- `src/utils/videoStatus.ts` (puro) exporta: `STATUS_*` constants, `STATUS_STAGES` (lista de 4 etapas para UI), `stageIndexFromStatus`, `progressPercentFromStatus`, `isErrorStatus`, `errorMessageForStatus`, `isFinalStatus`. Mensagens de erro (`ERROR_KEYPOINTS_MESSAGE`, `ERROR_MULTIPLAS_PESSOAS_MESSAGE`) expandem as do backend em texto amigável.
 - Padrão de polling em `pages/StatusPage.tsx`: `useEffect` inicia `poll()` que chama a API → `setState` → agenda próximo com `setTimeout(poll, 2000)` se não for estado final. Use `useRef<number | null>` para timer id e `useRef(false)` para flag de cancelamento. Na cleanup: marque `cancelledRef.current = true` + `clearTimeout`. Falhas transitórias continuam o polling (backend pode estar reiniciando); estado final (`concluido` ou erro) para e, em caso de `concluido`, navega para `/analysis/:id` com `replace: true`.

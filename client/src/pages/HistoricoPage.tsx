@@ -63,9 +63,11 @@ export default function HistoricoPage() {
 
   useEffect(() => {
     let cancelled = false
+    /* eslint-disable react-hooks/set-state-in-effect -- reset síncrono ao trocar page/retry é o comportamento desejado */
     setLoading(true)
     setError(null)
     setSelectedErrorId(null)
+    /* eslint-enable react-hooks/set-state-in-effect */
     getHistoricoRequest({ page, limit: HISTORICO_PAGE_SIZE })
       .then((resp) => {
         if (cancelled) return
@@ -161,7 +163,7 @@ export default function HistoricoPage() {
     }
   }
 
-  const allItems = data?.items ?? []
+  const allItems = useMemo(() => data?.items ?? [], [data?.items])
   const visibleItems = useMemo(
     () => filterItems(allItems, periodo, statusFilter),
     [allItems, periodo, statusFilter],

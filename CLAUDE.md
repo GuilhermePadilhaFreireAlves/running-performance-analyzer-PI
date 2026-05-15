@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Video-based running gait analyzer. A YOLO pose model extracts COCO keypoints from a runner's video; the scripts derive joint angles (elbows, knees, hips), trunk inclination, and cadence (step count / elapsed time).
 
-The codebase is early-stage — several files (`calculator.py`, `pose_detector.py`, `processing/data/__init__.py`) are empty stubs reserved for future refactoring. Real logic currently lives only in `processing/src/mainYolo.py` and `processing/src/mainGraph.py`, and the FastAPI `server/` is a hello-world stub.
+Real logic currently lives only in `processing/src/mainYolo.py` and `processing/src/mainGraph.py`, and the FastAPI `server/` is a hello-world stub.
 
 ## Commands
 
@@ -29,7 +29,7 @@ Run the API stub:
 uvicorn server.src.main:app --reload
 ```
 
-There are no tests, linter config, or build step yet.
+There is no linter config or build step yet.
 
 ## Required runtime assets (not in git)
 
