@@ -78,6 +78,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook colocado com o Provider por simplicidade
 export function useToast(): ToastApi {
   const ctx = useContext(ToastContext)
   if (ctx === null) {
@@ -138,7 +139,7 @@ const TOAST_ICON: Record<ToastVariant, string> = {
 function ToastCard({ item, onDismiss }: ToastCardProps) {
   const timerRef = useRef<number | null>(null)
   const remainingRef = useRef<number>(item.duration)
-  const startRef = useRef<number>(Date.now())
+  const startRef = useRef<number>(0)
   const [entered, setEntered] = useState(false)
 
   const clearTimer = useCallback(() => {

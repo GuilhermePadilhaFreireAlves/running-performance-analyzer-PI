@@ -72,9 +72,11 @@ export default function AnalysisRawPage() {
   useEffect(() => {
     if (!id) return
     let cancelled = false
+    /* eslint-disable react-hooks/set-state-in-effect -- reset síncrono ao trocar id/retry é o comportamento desejado */
     setLoading(true)
     setError(null)
     setData(null)
+    /* eslint-enable react-hooks/set-state-in-effect */
     getRawAnalysisRequest(id)
       .then((resp) => {
         if (cancelled) return
@@ -98,13 +100,15 @@ export default function AnalysisRawPage() {
 
   const handleRetry = useCallback(() => setRetryCount((c) => c + 1), [])
 
+  const frames = data?.frames
+  const simetria = data?.simetria
   const points = useMemo<FramePoint[]>(
-    () => (data?.frames ? buildFramePoints(data.frames) : []),
-    [data?.frames],
+    () => (frames ? buildFramePoints(frames) : []),
+    [frames],
   )
   const asymmetryRows = useMemo(
-    () => (data?.simetria ? buildAsymmetryRows(data.simetria) : []),
-    [data?.simetria],
+    () => (simetria ? buildAsymmetryRows(simetria) : []),
+    [simetria],
   )
 
   const visibleCharts = useMemo<readonly ChartSpec[]>(

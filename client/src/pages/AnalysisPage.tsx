@@ -41,9 +41,11 @@ export default function AnalysisPage() {
   useEffect(() => {
     if (!id) return
     let cancelled = false
+    /* eslint-disable react-hooks/set-state-in-effect -- reset síncrono ao trocar id/retry é o comportamento desejado */
     setLoading(true)
     setError(null)
     setData(null)
+    /* eslint-enable react-hooks/set-state-in-effect */
     getSimpleAnalysisRequest(id)
       .then((resp) => {
         if (cancelled) return

@@ -51,6 +51,7 @@ export function AppShell({ children }: AppShellProps) {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset menus on route change is the intended sync
     closeMenus()
   }, [location.pathname, closeMenus])
 
@@ -80,6 +81,7 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => {
     if (!drawerOpen) return
     const root = document.getElementById('shell-root')
+    const hamburgerBtn = hamburgerBtnRef.current
     root?.setAttribute('inert', '')
     drawerCloseBtnRef.current?.focus()
     const handleKey = (event: KeyboardEvent) => {
@@ -89,7 +91,7 @@ export function AppShell({ children }: AppShellProps) {
     return () => {
       root?.removeAttribute('inert')
       document.removeEventListener('keydown', handleKey)
-      hamburgerBtnRef.current?.focus()
+      hamburgerBtn?.focus()
     }
   }, [drawerOpen])
 

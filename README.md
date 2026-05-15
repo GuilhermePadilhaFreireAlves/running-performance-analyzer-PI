@@ -10,7 +10,7 @@ O projeto tem três frentes:
 
 ## Pré-requisitos
 
-- **Python 3.11+** (testado em 3.11/3.12)
+- **Python 3.11+** (3.11/3.12)
 - **Node.js 20+** e **npm 10+** (para o frontend)
 - **PostgreSQL 14+** (opcional — em desenvolvimento o backend cai em SQLite por padrão)
 - **Pesos do YOLO**: arquivo `yolo26x-pose.pt` na raiz do repositório (~126 MB). Não está versionado — baixe os pesos da Ultralytics e coloque na raiz, ou aponte a env var `YOLO_POSE_MODEL` para outro caminho.
@@ -99,7 +99,6 @@ VITE_API_BASE_URL=http://localhost:8000
 npm run dev     # Vite dev server em http://localhost:5173
 npm run build   # tsc -b + vite build (build + typecheck de produção)
 npm run lint    # ESLint
-npm test        # Vitest (utilitários puros em src/utils/*.test.ts)
 ```
 
 Para a aplicação funcionar end-to-end, suba o backend (`uvicorn ...` na raiz) e o frontend (`npm run dev` em `client/`) em terminais separados.
@@ -142,7 +141,7 @@ Ambos os scripts assumem:
 │   │   ├── context/       # AuthContext + useAuth
 │   │   ├── components/    # PrivateRoute, etc.
 │   │   ├── pages/         # telas (login, signup, upload, status, analysis, ...)
-│   │   └── utils/         # validações e helpers puros (testáveis em Node)
+│   │   └── utils/         # validações e helpers puros
 │   └── package.json
 ├── requirements.txt
 ├── mypy.ini
