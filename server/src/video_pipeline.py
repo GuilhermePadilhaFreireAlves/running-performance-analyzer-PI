@@ -524,6 +524,9 @@ def run_pipeline(
         _persistir_simetria(
             session, sessao_id, result.frames, result.fps, altura_cm
         )
+        _persistir_eventos(
+            session, sessao_id, result.frames, result.fps, altura_cm
+        )
         _finalizar_analise(session, sessao_id)
     finally:
         session.close()
@@ -852,6 +855,78 @@ def _persistir_tcs(
                 apenas_informativa=True,
             )
         )
+    session.commit()
+
+
+def _persistir_eventos(
+    session: Session,
+    sessao_id: int,
+    frames: list[FrameKeypoints],
+    fps: float,
+    altura_cm: float | None,
+) -> None:
+    """Serializa os eventos por passada (TCS, overstriding, cadência) em JSON.
+
+    Cada evento é um ponto esparso na timeline: frame de ocorrência + valor
+    calculado naquele contato/passada. O resultado é persistido em
+    ``SessaoAnalise.eventos_json`` e consumido pelo endpoint raw (US-018)
+    para exibir gráficos temporais de métricas por passada.
+    """
+    import json
+
+    from server.src.biomechanics.cadencia import calcular_cadencia
+    from server.src.biomechanics.overstriding import calcular_overstriding
+    from server.src.biomechanics.tcs import calcular_tcs
+
+    payload: dict[str, list[dict[str, float]]] = {
+        "tcs_esq": [],
+        "tcs_dir": [],
+        "overstriding_esq": [],
+        "overstriding_dir": [],
+        "cadencia": [],
+    }
+
+    if fps > 0:
+        tcs = calcular_tcs(frames, fps)
+        if tcs.esquerdo is not None:
+            payload["tcs_esq"] = [
+                {"frame_idx": float(e.frame_idx), "tcs_ms": e.tcs_ms}
+                for e in tcs.esquerdo.eventos
+            ]
+        if tcs.direito is not None:
+            payload["tcs_dir"] = [
+                {"frame_idx": float(e.frame_idx), "tcs_ms": e.tcs_ms}
+                for e in tcs.direito.eventos
+            ]
+        cad = calcular_cadencia(frames, fps)
+        if cad is not None:
+            payload["cadencia"] = [
+                {"frame_idx": float(e.frame_idx), "cadencia_spm": e.cadencia_spm}
+                for e in cad.eventos
+            ]
+
+    if altura_cm is not None and altura_cm > 0:
+        try:
+            from server.src.biomechanics.escala import calcular_fator_escala
+            fator = calcular_fator_escala(frames, altura_cm).fator_escala
+            ovs = calcular_overstriding(frames, fator)
+            if ovs.esquerdo is not None:
+                payload["overstriding_esq"] = [
+                    {"frame_idx": float(e.frame_idx), "overstriding_cm": e.overstriding_cm}
+                    for e in ovs.esquerdo.eventos
+                ]
+            if ovs.direito is not None:
+                payload["overstriding_dir"] = [
+                    {"frame_idx": float(e.frame_idx), "overstriding_cm": e.overstriding_cm}
+                    for e in ovs.direito.eventos
+                ]
+        except ValueError:
+            pass
+
+    sessao = session.get(SessaoAnalise, sessao_id)
+    if sessao is None:
+        return
+    sessao.eventos_json = json.dumps(payload, allow_nan=False)
     session.commit()
 
 

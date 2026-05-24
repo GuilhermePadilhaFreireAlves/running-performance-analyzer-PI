@@ -51,9 +51,33 @@ class SimetriaResponse(BaseModel):
     oscilacao: float | None = None
 
 
+class TcsEvento(BaseModel):
+    frame_idx: int
+    tcs_ms: float
+
+
+class OverstridingEvento(BaseModel):
+    frame_idx: int
+    overstriding_cm: float
+
+
+class CadenciaEvento(BaseModel):
+    frame_idx: int
+    cadencia_spm: float
+
+
+class EventosResponse(BaseModel):
+    tcs_esq: list[TcsEvento] = []
+    tcs_dir: list[TcsEvento] = []
+    overstriding_esq: list[OverstridingEvento] = []
+    overstriding_dir: list[OverstridingEvento] = []
+    cadencia: list[CadenciaEvento] = []
+
+
 class AnalysisRawResponse(BaseModel):
     fps: float | None = None
     frames: list[RawFrame] = []
     metricas_agregadas: list[MetricaResumida] = []
     simetria: SimetriaResponse = SimetriaResponse()
+    eventos: EventosResponse = EventosResponse()
     erro: str | None = None

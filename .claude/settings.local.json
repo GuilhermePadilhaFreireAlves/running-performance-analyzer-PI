@@ -87,7 +87,10 @@
       "Bash(git fetch *)",
       "Bash(awk '{print $2}')",
       "Bash(Get-ChildItem -Recurse -Filter \"*.tsx\" -o \"*.ts\")",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(npm run *)",
+      "Bash(python -c \"from server.src.biomechanics.tcs import calcular_tcs; from server.src.biomechanics.overstriding import calcular_overstriding; from server.src.biomechanics.cadencia import calcular_cadencia; print\\('OK'\\)\")",
+      "Bash(venv\\\\Scripts\\\\python.exe -m alembic -c server/alembic.ini upgrade head)"
     ]
   }
 }

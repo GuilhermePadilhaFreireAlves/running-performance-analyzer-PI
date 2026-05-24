@@ -33,11 +33,20 @@ MSG_FPS_INVALIDO = (
 
 
 @dataclass(frozen=True)
+class TcsEvento:
+    """TCS de um ciclo individual de contato com o solo."""
+
+    frame_idx: int
+    tcs_ms: float
+
+
+@dataclass(frozen=True)
 class TcsLado:
     """TCS médio (ms) para um lado do corpo, sobre ciclos válidos."""
 
     tcs_medio_ms: float
     frames_contato: tuple[int, ...]
+    eventos: tuple[TcsEvento, ...]
 
 
 @dataclass(frozen=True)
@@ -124,9 +133,14 @@ def _calcular_lado(
         tcs_values_ms.append((n_contato / fps) * 1000.0)
         frames_usados.append(frames[inicio_idx].frame_idx)
     media = sum(tcs_values_ms) / len(tcs_values_ms)
+    eventos = tuple(
+        TcsEvento(frame_idx=f, tcs_ms=ms)
+        for f, ms in zip(frames_usados, tcs_values_ms)
+    )
     return TcsLado(
         tcs_medio_ms=media,
         frames_contato=tuple(frames_usados),
+        eventos=eventos,
     )
 
 

@@ -4,7 +4,7 @@
 // shape para visualização de simetria esq/dir. Não toca o DOM — Vitest
 // roda em ambiente Node.
 
-import type { RawFrame, SimetriaRawResponse } from '../api/analysis'
+import type { EventosRawResponse, RawFrame, SimetriaRawResponse } from '../api/analysis'
 
 // Convenção: backend persiste joelho como ângulo interno (perna
 // estendida = 180°). A UI do usuário mostra flexão = 180 - interno,
@@ -320,4 +320,114 @@ export function buildCsv(points: readonly FramePoint[]): string {
 
 export function buildCsvFilename(sessaoId: string | number): string {
   return `stride-analise-${sessaoId}-frames.csv`
+}
+
+// --------------------------------------------------------------------------
+// Gráficos de eventos por passada (TCS, overstriding, cadência instantânea).
+// Cada ponto representa um evento esparso (contato/passada) na timeline,
+// não um frame contínuo.
+// --------------------------------------------------------------------------
+
+export type EventChartKey = 'tcs' | 'overstriding' | 'cadencia'
+
+export interface EventChartSeries {
+  key: string
+  label: string
+  color: string
+}
+
+export interface EventChartSpec {
+  chartKey: EventChartKey
+  title: string
+  unidade: string
+  yLabel: string
+  series: readonly EventChartSeries[]
+  valorKey: string
+}
+
+export const EVENT_CHART_SPECS: readonly EventChartSpec[] = [
+  {
+    chartKey: 'tcs',
+    title: 'Tempo de contato por passada',
+    unidade: 'ms',
+    yLabel: 'TCS (ms)',
+    series: [
+      { key: 'tcs_esq', label: 'TCS esq.', color: OKABE_ITO.bluishGreen },
+      { key: 'tcs_dir', label: 'TCS dir.', color: OKABE_ITO.vermillion },
+    ],
+    valorKey: 'tcs_ms',
+  },
+  {
+    chartKey: 'overstriding',
+    title: 'Overstriding no contato inicial por passada',
+    unidade: 'cm',
+    yLabel: 'Overstriding (cm)',
+    series: [
+      { key: 'overstriding_esq', label: 'Overstriding esq.', color: OKABE_ITO.bluishGreen },
+      { key: 'overstriding_dir', label: 'Overstriding dir.', color: OKABE_ITO.vermillion },
+    ],
+    valorKey: 'overstriding_cm',
+  },
+  {
+    chartKey: 'cadencia',
+    title: 'Cadência instantânea por passada',
+    unidade: 'spm',
+    yLabel: 'Cadência (spm)',
+    series: [
+      { key: 'cadencia', label: 'Cadência inst.', color: OKABE_ITO.orange },
+    ],
+    valorKey: 'cadencia_spm',
+  },
+]
+
+// Ponto na timeline de eventos: frame_idx + um valor por série (null onde
+// a série não tem evento naquele frame).
+export interface EventTimelinePoint {
+  frame_idx: number
+  [key: string]: number | null
+}
+
+// Mescla todos os frame_idx de todas as séries num array ordenado e preenche
+// null onde uma série não tem evento. Permite usar LineChart com connectNulls
+// para ligar apenas os pontos da mesma perna sem misturar esq/dir.
+export function buildEventTimeline(
+  eventos: EventosRawResponse,
+  spec: EventChartSpec,
+): EventTimelinePoint[] {
+  const allFrames = new Set<number>()
+  const seriesData = new Map<string, Map<number, number>>()
+
+  for (const serie of spec.series) {
+    const arr = (eventos as unknown as Record<string, Record<string, number>[]>)[serie.key] ?? []
+    const data = new Map<number, number>()
+    for (const e of arr) {
+      const fi = e['frame_idx']
+      const val = e[spec.valorKey]
+      if (fi !== undefined && val !== undefined) {
+        allFrames.add(fi)
+        data.set(fi, val)
+      }
+    }
+    seriesData.set(serie.key, data)
+  }
+
+  return Array.from(allFrames)
+    .sort((a, b) => a - b)
+    .map((frame_idx) => {
+      const point: EventTimelinePoint = { frame_idx }
+      for (const serie of spec.series) {
+        point[serie.key] = seriesData.get(serie.key)?.get(frame_idx) ?? null
+      }
+      return point
+    })
+}
+
+export function hasEventos(eventos: EventosRawResponse): boolean {
+  return (
+    eventos.tcs_esq.length > 0 ||
+    eventos.tcs_dir.length > 0 ||
+    eventos.overstriding_esq.length > 0 ||
+    eventos.overstriding_dir.length > 0 ||
+    eventos.cadencia.length > 0
+  )
 }

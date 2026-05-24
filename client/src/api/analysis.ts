@@ -46,11 +46,35 @@ export interface SimetriaRawResponse {
   oscilacao: number | null
 }
 
+export interface TcsEvento {
+  frame_idx: number
+  tcs_ms: number
+}
+
+export interface OverstridingEvento {
+  frame_idx: number
+  overstriding_cm: number
+}
+
+export interface CadenciaEvento {
+  frame_idx: number
+  cadencia_spm: number
+}
+
+export interface EventosRawResponse {
+  tcs_esq: TcsEvento[]
+  tcs_dir: TcsEvento[]
+  overstriding_esq: OverstridingEvento[]
+  overstriding_dir: OverstridingEvento[]
+  cadencia: CadenciaEvento[]
+}
+
 export interface AnalysisRawResponse {
   fps: number | null
   frames: RawFrame[]
   metricas_agregadas: MetricaResumida[]
   simetria: SimetriaRawResponse
+  eventos: EventosRawResponse
   erro: string | null
 }
 

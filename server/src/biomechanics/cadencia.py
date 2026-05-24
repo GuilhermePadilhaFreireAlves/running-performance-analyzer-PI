@@ -30,12 +30,21 @@ MSG_FPS_INVALIDO = (
 
 
 @dataclass(frozen=True)
+class CadenciaEvento:
+    """Cadência instantânea (spm) derivada do intervalo entre duas passadas consecutivas."""
+
+    frame_idx: int
+    cadencia_spm: float
+
+
+@dataclass(frozen=True)
 class Cadencia:
     """Resultado do cálculo de cadência (spm)."""
 
     cadencia_spm: float
     contatos_pe_direito: int
     duracao_segundos: float
+    eventos: tuple[CadenciaEvento, ...]
 
 
 def _ankle_y(frame: FrameKeypoints, idx: int) -> float | None:
@@ -97,8 +106,18 @@ def calcular_cadencia(
     if duracao <= 0:
         return None
     cadencia = (len(contatos) * 2.0 / duracao) * 60.0
+    eventos: list[CadenciaEvento] = []
+    for i in range(len(contatos) - 1):
+        delta = contatos[i + 1] - contatos[i]
+        if delta > 0:
+            spm = (2.0 * fps / delta) * 60.0
+            eventos.append(CadenciaEvento(
+                frame_idx=frames[contatos[i]].frame_idx,
+                cadencia_spm=spm,
+            ))
     return Cadencia(
         cadencia_spm=cadencia,
         contatos_pe_direito=len(contatos),
         duracao_segundos=duracao,
+        eventos=tuple(eventos),
     )
