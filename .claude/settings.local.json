@@ -85,7 +85,9 @@
       "Bash(git remote *)",
       "Bash(git push *)",
       "Bash(git fetch *)",
-      "Bash(awk '{print $2}')"
+      "Bash(awk '{print $2}')",
+      "Bash(Get-ChildItem -Recurse -Filter \"*.tsx\" -o \"*.ts\")",
+      "Bash(Select-Object FullName)"
     ]
   }
 }

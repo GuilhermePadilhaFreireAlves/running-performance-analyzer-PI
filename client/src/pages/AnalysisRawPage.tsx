@@ -171,7 +171,7 @@ export default function AnalysisRawPage() {
         <ErrorState
           message={error}
           onRetry={handleRetry}
-          backTo={{ to: `/analysis/${id}`, label: 'Voltar ao diagnóstico' }}
+          backTo={{ to: '/historico', label: 'Voltar ao histórico' }}
         />
       </main>
     )
@@ -198,9 +198,9 @@ export default function AnalysisRawPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(`/analysis/${id}`)}
+          onClick={() => navigate('/historico')}
         >
-          <span aria-hidden="true">←</span> Voltar ao diagnóstico
+          <span aria-hidden="true">←</span> Histórico
         </Button>
       </nav>
 
@@ -387,9 +387,16 @@ export default function AnalysisRawPage() {
         <Button
           variant="secondary"
           size="md"
+          onClick={() => navigate('/historico')}
+        >
+          Voltar ao histórico
+        </Button>
+        <Button
+          variant="primary"
+          size="md"
           onClick={() => navigate(`/analysis/${id}`)}
         >
-          Voltar ao diagnóstico
+          Ver diagnóstico
         </Button>
       </footer>
     </main>
