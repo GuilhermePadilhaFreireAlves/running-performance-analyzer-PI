@@ -8,7 +8,7 @@ import bcrypt
 import jwt
 
 JWT_ALGORITHM = "HS256"
-DEFAULT_TOKEN_TTL_MINUTES = 60
+DEFAULT_TOKEN_TTL_MINUTES = 720
 DEFAULT_SECRET_KEY = "dev-secret-change-me-in-production-please"
 
 
