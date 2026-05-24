@@ -33,11 +33,20 @@ KP_TORNOZELO_DIR = 16
 
 
 @dataclass(frozen=True)
+class OverstridingEvento:
+    """Overstriding de um contato inicial individual."""
+
+    frame_idx: int
+    overstriding_cm: float
+
+
+@dataclass(frozen=True)
 class OverstridingLado:
     """Overstriding médio em cm em um lado do corpo."""
 
     overstriding_medio_cm: float
     frames_contato: tuple[int, ...]
+    eventos: tuple[OverstridingEvento, ...]
 
 
 @dataclass(frozen=True)
@@ -118,9 +127,14 @@ def _calcular_lado(
     if not overstridings_cm:
         return None
     media = sum(overstridings_cm) / len(overstridings_cm)
+    eventos = tuple(
+        OverstridingEvento(frame_idx=f, overstriding_cm=cm)
+        for f, cm in zip(frames_usados, overstridings_cm)
+    )
     return OverstridingLado(
         overstriding_medio_cm=media,
         frames_contato=tuple(frames_usados),
+        eventos=eventos,
     )
 
 

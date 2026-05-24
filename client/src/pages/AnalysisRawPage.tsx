@@ -24,22 +24,28 @@ import { extractApiError } from '../api/errors'
 import {
   CHART_SPECS,
   CSV_COLUMNS,
+  EVENT_CHART_SPECS,
   asymmetryBarPct,
   asymmetryStatus,
   buildAsymmetryRows,
   buildCsv,
   buildCsvFilename,
+  buildEventTimeline,
   buildFramePoints,
   formatAsymmetry,
   formatChartValue,
+  hasEventos,
   isFrameOutOfRange,
   isValueOutOfRange,
   SIMETRIA_IDEAL_MAX_PCT,
   type ChartKey,
   type ChartSpec,
+  type EventChartSpec,
+  type EventTimelinePoint,
   type FramePoint,
   type MetricaFrameKey,
 } from '../utils/rawAnalysis'
+import type { EventosRawResponse } from '../api/analysis'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useToast } from '../context/ToastContext'
 import { Badge, Banner, Button, ErrorState, LoadingState } from '../components/ui'
@@ -102,6 +108,9 @@ export default function AnalysisRawPage() {
 
   const frames = data?.frames
   const simetria = data?.simetria
+  const eventos: EventosRawResponse = data?.eventos ?? {
+    tcs_esq: [], tcs_dir: [], overstriding_esq: [], overstriding_dir: [], cadencia: [],
+  }
   const points = useMemo<FramePoint[]>(
     () => (frames ? buildFramePoints(frames) : []),
     [frames],
@@ -278,6 +287,24 @@ export default function AnalysisRawPage() {
           </>
         )}
       </section>
+
+      {hasEventos(eventos) && (
+        <section className="raw-section" aria-labelledby="raw-eventos-heading">
+          <div className="raw-section-header">
+            <h2 id="raw-eventos-heading">Métricas por passada</h2>
+            <p className="raw-section-help">
+              Cada ponto representa uma passada detectada — esquerda em{' '}
+              <span className="raw-legend-swatch raw-legend-esq" aria-hidden="true" /> verde,
+              direita em <span className="raw-legend-swatch raw-legend-dir" aria-hidden="true" /> laranja.
+            </p>
+          </div>
+          <div className="raw-chart-grid">
+            {EVENT_CHART_SPECS.map((spec) => (
+              <EventChart key={spec.chartKey} spec={spec} eventos={eventos} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="raw-section" aria-labelledby="raw-asymmetry-heading">
         <h2 id="raw-asymmetry-heading">Simetria esquerda ↔ direita</h2>
@@ -466,6 +493,85 @@ function RawChart({ spec, points }: RawChartProps) {
             ))}
           </LineChart>
         </ResponsiveContainer>
+      </div>
+    </article>
+  )
+}
+
+interface EventChartProps {
+  spec: EventChartSpec
+  eventos: EventosRawResponse
+}
+
+function EventChart({ spec, eventos }: EventChartProps) {
+  const points = useMemo<EventTimelinePoint[]>(
+    () => buildEventTimeline(eventos, spec),
+    [eventos, spec],
+  )
+
+  return (
+    <article className="raw-chart">
+      <h3 className="raw-chart-title">{spec.title}</h3>
+      <div className="raw-chart-body">
+        {points.length === 0 ? (
+          <Banner variant="info">Nenhum evento detectado para esta métrica.</Banner>
+        ) : (
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={points} margin={{ top: 8, right: 16, left: 8, bottom: 24 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis
+                dataKey="frame_idx"
+                stroke="var(--text-muted)"
+                tick={{ fontSize: 11 }}
+                label={{
+                  value: 'Frame',
+                  position: 'insideBottom',
+                  offset: -8,
+                  fill: 'var(--text-muted)',
+                  fontSize: 12,
+                }}
+              />
+              <YAxis
+                stroke="var(--text-muted)"
+                tick={{ fontSize: 11 }}
+                label={{
+                  value: spec.yLabel,
+                  angle: -90,
+                  position: 'insideLeft',
+                  offset: 12,
+                  fill: 'var(--text-muted)',
+                  fontSize: 12,
+                }}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+                labelFormatter={(label) => `Frame ${label}`}
+                formatter={(value) =>
+                  formatChartValue(value as number | null, spec.unidade)
+                }
+              />
+              <Legend verticalAlign="top" height={28} wrapperStyle={{ fontSize: 12 }} />
+              {spec.series.map((serie) => (
+                <Line
+                  key={serie.key}
+                  type="linear"
+                  dataKey={serie.key}
+                  name={serie.label}
+                  stroke={serie.color}
+                  dot={{ r: 4, fill: serie.color }}
+                  strokeWidth={1.5}
+                  connectNulls
+                  isAnimationActive={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </article>
   )

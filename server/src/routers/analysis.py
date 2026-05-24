@@ -15,6 +15,7 @@ from server.src.routers.videos import STATUS_DESCRICAO
 from server.src.schemas.analysis import (
     AnalysisRawResponse,
     AnalysisSimpleResponse,
+    EventosResponse,
     MetricaResumida,
     RawFrame,
     RecomendacaoResponse,
@@ -123,12 +124,14 @@ def get_raw_analysis(
             metricas_agregadas.append(MetricaResumida.model_validate(m))
 
     frames = _parse_frames(sessao.dados_brutos_json)
+    eventos = _parse_eventos(sessao.eventos_json)
 
     return AnalysisRawResponse(
         fps=sessao.fps,
         frames=frames,
         metricas_agregadas=metricas_agregadas,
         simetria=simetria,
+        eventos=eventos,
     )
 
 
@@ -142,3 +145,15 @@ def _parse_frames(raw_json: str | None) -> list[RawFrame]:
     if not isinstance(payload, list):
         return []
     return [RawFrame.model_validate(item) for item in payload]
+
+
+def _parse_eventos(raw_json: str | None) -> EventosResponse:
+    if not raw_json:
+        return EventosResponse()
+    try:
+        payload: Any = json.loads(raw_json)
+    except ValueError:
+        return EventosResponse()
+    if not isinstance(payload, dict):
+        return EventosResponse()
+    return EventosResponse.model_validate(payload)

@@ -54,6 +54,7 @@ class SessaoAnalise(Base):
     nota_geral: Mapped[float | None] = mapped_column(Float, nullable=True)
     feedback_ia: Mapped[str | None] = mapped_column(Text, nullable=True)
     dados_brutos_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    eventos_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, server_default="pendente"
     )
