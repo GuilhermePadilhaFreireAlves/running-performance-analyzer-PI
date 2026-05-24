@@ -260,16 +260,16 @@ export default function AnalysisPage() {
         <Button
           variant="secondary"
           size="md"
+          onClick={() => navigate(`/analysis/${id}/raw`)}
+        >
+          <span aria-hidden="true">←</span> Dados técnicos
+        </Button>
+        <Button
+          variant="secondary"
+          size="md"
           onClick={() => navigate('/historico')}
         >
           Voltar ao histórico
-        </Button>
-        <Button
-          variant="primary"
-          size="md"
-          onClick={() => navigate(`/analysis/${id}/raw`)}
-        >
-          Ver dados técnicos
         </Button>
       </footer>
     </main>

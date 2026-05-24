@@ -106,7 +106,7 @@ export default function StatusPage() {
   useEffect(() => {
     if (!isCelebrating || !videoId) return
     const timer = window.setTimeout(() => {
-      navigate(`/analysis/${videoId}`, { replace: true })
+      navigate(`/analysis/${videoId}/raw`, { replace: true })
     }, CELEBRATION_REDIRECT_MS)
     return () => window.clearTimeout(timer)
   }, [isCelebrating, videoId, navigate])
@@ -290,16 +290,16 @@ function CelebrationPanel({ videoId }: { videoId: string | null }) {
     <section className="status-celebration" role="status" aria-live="polite">
       <p className="status-celebration-title">Análise concluída!</p>
       <p className="status-celebration-subtitle">
-        Levando você para o diagnóstico…
+        Levando você para os dados técnicos…
       </p>
       {videoId ? (
         <Button
           variant="primary"
           size="md"
           className="status-celebration-cta"
-          onClick={() => navigate(`/analysis/${videoId}`, { replace: true })}
+          onClick={() => navigate(`/analysis/${videoId}/raw`, { replace: true })}
         >
-          Ver diagnóstico
+          Ver dados técnicos
         </Button>
       ) : null}
     </section>
