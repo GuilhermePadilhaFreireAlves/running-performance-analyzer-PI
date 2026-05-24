@@ -7,12 +7,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ultralytics import YOLO
 
-# Maximiza uso de cores em inferência CPU (yolo26x em CPU é o gargalo aqui).
 try:
     import torch
-    torch.set_num_threads(os.cpu_count() or 1)
+    _DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if _DEVICE == 'cpu':
+        torch.set_num_threads(os.cpu_count() or 1)
 except ImportError:
-    pass
+    _DEVICE = 'cpu'
 
 # Mapeamento de keypoints do COCO para índices
 KEYPOINT_DICT = {
@@ -106,7 +107,7 @@ results = model.predict(
     save=False,
     show=False,
     verbose=False,
-    device='cpu',
+    device=_DEVICE,
 )
 
 # --- Variáveis para cálculo de cadência ---

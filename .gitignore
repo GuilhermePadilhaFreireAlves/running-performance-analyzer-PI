@@ -11,6 +11,7 @@ __pycache__/
 
 # Modelos YOLO (baixar localmente — não versionar pesos)
 *.pt
+*_openvino_model/
 
 # Entradas de vídeo / saídas de análise locais
 run/
