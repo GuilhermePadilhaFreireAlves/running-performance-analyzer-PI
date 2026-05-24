@@ -1,6 +1,7 @@
 numpy
 matplotlib
 ultralytics
+openvino
 fastapi
 uvicorn[standard]
 opencv-python-headless
