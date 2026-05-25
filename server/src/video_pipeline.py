@@ -42,6 +42,18 @@ def _configure_torch_threads() -> None:
         pass
     _torch_threads_configured = True
 
+
+def _detect_yolo_device() -> str:
+    try:
+        import torch
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except ImportError:
+        return "cpu"
+
+
+_YOLO_DEVICE = _detect_yolo_device()
+print(f"[device] pipeline YOLO usando: {_YOLO_DEVICE}", flush=True)
+
 FPS_MINIMO = 20.0
 PACE_MIN = 3.0
 PACE_MAX = 12.0
@@ -202,13 +214,12 @@ class DefaultPoseExtractor:
         # de cv2.read() + predict por frame. Isso reduz drasticamente o
         # overhead em CPU: o modelo é avaliado uma única vez, a decodificação
         # de frames é feita pelo loader interno otimizado, e a iteração é
-        # lazy (não acumula tudo em memória). `device="cpu"` evita a
-        # autodetecção de GPU a cada chamada.
+        # lazy (não acumula tudo em memória).
         stream = predict(
             source=video_path,
             stream=True,
             verbose=False,
-            device="cpu",
+            device=_YOLO_DEVICE,
         )
         raw_frames: list[FrameKeypoints] = [
             _keypoints_from_result(result, idx)
@@ -257,7 +268,7 @@ def _shoulder_hip_ratio(model: object, frame: object) -> float | None:
     predict = getattr(model, "predict", None)
     if predict is None:
         return None
-    results = predict(source=frame, verbose=False, device="cpu")
+    results = predict(source=frame, verbose=False, device=_YOLO_DEVICE)
     if not results:
         return None
     kpts_obj = getattr(results[0], "keypoints", None)
@@ -346,7 +357,7 @@ def _predict_frame_keypoints(
             person_count=0,
             keypoints=[None] * NUM_KEYPOINTS,
         )
-    results = predict(source=frame, verbose=False, device="cpu")
+    results = predict(source=frame, verbose=False, device=_YOLO_DEVICE)
     if not results:
         return FrameKeypoints(
             frame_idx=frame_idx,

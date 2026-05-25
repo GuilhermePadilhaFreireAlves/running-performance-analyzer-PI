@@ -101,6 +101,7 @@ model = YOLO('yolo26x-pose.pt')
 # Executa a predição no vídeo. `save=False` evita re-encodar o vídeo anotado
 # (custo gigantesco em CPU). `show=False` evita render da janela. `verbose=False`
 # remove o spam de logs por frame. `device='cpu'` evita autodetecção a cada call.
+print(f"[device] usando: {_DEVICE}")
 results = model.predict(
     source='./run/profissional.mp4',
     stream=True,
