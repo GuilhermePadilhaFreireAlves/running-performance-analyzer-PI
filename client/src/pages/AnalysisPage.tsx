@@ -133,7 +133,7 @@ export default function AnalysisPage() {
         aria-label="Nota geral"
       >
         <NotaRing nota={data.nota_geral} classification={classification} />
-        <div className="analysis-hero-body">
+        <div className="analysis-hero-body flex items-center">
           <p className="analysis-hero-label">Nota geral</p>
           <p className="analysis-hero-classification">{classification}</p>
           {data.feedback_ia && (

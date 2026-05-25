@@ -219,7 +219,7 @@ class DefaultPoseExtractor:
             source=video_path,
             stream=True,
             verbose=False,
-            device=_YOLO_DEVICE,
+            device=0,
         )
         raw_frames: list[FrameKeypoints] = [
             _keypoints_from_result(result, idx)
