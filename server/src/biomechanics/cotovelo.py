@@ -14,9 +14,9 @@ convenção legada em `processing/src/mainGraph.py` (`180 - internal`).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import acos, degrees, hypot
 from typing import Sequence
 
+from server.src.biomechanics.geometry import angulo_interno
 from server.src.video_pipeline import FrameKeypoints
 
 KP_OMBRO_ESQ = 5
@@ -53,18 +53,7 @@ def _angulo_interno(
     c: tuple[float, float],
 ) -> float | None:
     """Ângulo em `b` entre os vetores `b→a` e `b→c` (em graus), via arccos."""
-    v1x, v1y = a[0] - b[0], a[1] - b[1]
-    v2x, v2y = c[0] - b[0], c[1] - b[1]
-    mag1 = hypot(v1x, v1y)
-    mag2 = hypot(v2x, v2y)
-    if mag1 == 0 or mag2 == 0:
-        return None
-    cos_theta = (v1x * v2x + v1y * v2y) / (mag1 * mag2)
-    if cos_theta > 1.0:
-        cos_theta = 1.0
-    elif cos_theta < -1.0:
-        cos_theta = -1.0
-    return degrees(acos(cos_theta))
+    return angulo_interno(a, b, c)
 
 
 def _calcular_lado(
