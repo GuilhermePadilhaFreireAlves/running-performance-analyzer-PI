@@ -62,6 +62,14 @@ class RecomendacaoGerada:
 
 
 @dataclass(frozen=True)
+class RecommendationText:
+    """Texto da recomendacao separado da classificacao de severidade."""
+
+    categoria: str
+    descricao: str
+
+
+@dataclass(frozen=True)
 class AnaliseResultado:
     """Saída agregada do gerador: nota geral, resumo textual e recomendações."""
 
@@ -141,6 +149,17 @@ def _lado_de_tipo(tipo: str) -> str:
     return _LADO_HUMANO.get(sufixo, "")
 
 
+def _recomendacao(
+    texto: RecommendationText,
+    severidade: str,
+) -> RecomendacaoGerada:
+    return RecomendacaoGerada(
+        categoria=texto.categoria,
+        descricao=texto.descricao,
+        severidade=severidade,
+    )
+
+
 def _analisar_joelho(tipo: str, valor: float) -> RecomendacaoGerada:
     severidade = _classificar_joelho_interno(valor)
     lado = _lado_de_tipo(tipo)
@@ -176,8 +195,9 @@ def _analisar_joelho(tipo: str, valor: float) -> RecomendacaoGerada:
                 f"({flexao:.1f}°) — fortaleça quadríceps e glúteos para "
                 "controlar a flexão."
             )
-    return RecomendacaoGerada(
-        categoria=categoria, descricao=descricao, severidade=severidade
+    return _recomendacao(
+        RecommendationText(categoria=categoria, descricao=descricao),
+        severidade,
     )
 
 
@@ -212,8 +232,9 @@ def _analisar_cotovelo(tipo: str, valor: float) -> RecomendacaoGerada:
                 f"Cotovelo {lado} muito aberto ({valor:.1f}°) — sinal de "
                 "fadiga ou tensão no ombro; ajuste o swing."
             )
-    return RecomendacaoGerada(
-        categoria=categoria, descricao=descricao, severidade=severidade
+    return _recomendacao(
+        RecommendationText(categoria=categoria, descricao=descricao),
+        severidade,
     )
 
 
@@ -249,8 +270,9 @@ def _analisar_tronco(tipo: str, valor: float) -> RecomendacaoGerada:
                 f"Inclinação excessiva do tronco ({valor:.1f}°) — reduz a "
                 "economia de corrida e sobrecarrega o quadril."
             )
-    return RecomendacaoGerada(
-        categoria=categoria, descricao=descricao, severidade=severidade
+    return _recomendacao(
+        RecommendationText(categoria=categoria, descricao=descricao),
+        severidade,
     )
 
 
@@ -277,8 +299,9 @@ def _analisar_overstriding(tipo: str, valor: float) -> RecomendacaoGerada:
             "do centro de massa) — risco elevado de lesão por frenagem; "
             "aumente a cadência e reduza o comprimento do passo."
         )
-    return RecomendacaoGerada(
-        categoria=categoria, descricao=descricao, severidade=severidade
+    return _recomendacao(
+        RecommendationText(categoria=categoria, descricao=descricao),
+        severidade,
     )
 
 
@@ -314,8 +337,9 @@ def _analisar_oscilacao(tipo: str, valor: float) -> RecomendacaoGerada:
                 f"Oscilação vertical excessiva ({valor:.1f} cm) — corrida "
                 "anti-econômica, propensão a fadiga precoce."
             )
-    return RecomendacaoGerada(
-        categoria=categoria, descricao=descricao, severidade=severidade
+    return _recomendacao(
+        RecommendationText(categoria=categoria, descricao=descricao),
+        severidade,
     )
 
 
@@ -346,8 +370,9 @@ def _analisar_simetria(tipo: str, valor: float) -> RecomendacaoGerada:
             "significativo entre os lados e preditor relevante de lesão; "
             "procure avaliação profissional."
         )
-    return RecomendacaoGerada(
-        categoria=categoria, descricao=descricao, severidade=severidade
+    return _recomendacao(
+        RecommendationText(categoria=categoria, descricao=descricao),
+        severidade,
     )
 
 
