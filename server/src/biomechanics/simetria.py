@@ -24,6 +24,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence
 
+from server.src.biomechanics.joelho import (
+    calcular_angulo_joelho_contato_inicial,
+)
+from server.src.biomechanics.oscilacao import (
+    calcular_oscilacao_vertical_por_lado,
+)
+from server.src.biomechanics.tcs import calcular_tcs
 from server.src.video_pipeline import FrameKeypoints
 
 
@@ -79,14 +86,6 @@ def calcular_simetria(
     possível com o fator). ``fps <= 0`` descarta apenas a simetria de TCS
     — os demais índices não dependem de tempo real.
     """
-    from server.src.biomechanics.joelho import (
-        calcular_angulo_joelho_contato_inicial,
-    )
-    from server.src.biomechanics.oscilacao import (
-        calcular_oscilacao_vertical_por_lado,
-    )
-    from server.src.biomechanics.tcs import calcular_tcs
-
     joelho = calcular_angulo_joelho_contato_inicial(frames)
     simetria_joelho = indice_simetria(
         joelho.esquerdo.angulo_medio_graus if joelho.esquerdo else None,
