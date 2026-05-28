@@ -66,6 +66,18 @@ def _y_com(frame: FrameKeypoints) -> float | None:
     return (qe[1] + qd[1]) / 2.0
 
 
+def _y_com_validos_no_intervalo(
+    frames: Sequence[FrameKeypoints],
+    inicio: int,
+    fim: int,
+) -> list[float]:
+    return [
+        y
+        for frame in frames[inicio : fim + 1]
+        if (y := _y_com(frame)) is not None
+    ]
+
+
 def _calcular_oscilacao_para_tornozelo(
     frames: Sequence[FrameKeypoints],
     fator_escala: float,
@@ -83,11 +95,7 @@ def _calcular_oscilacao_para_tornozelo(
     for k in range(len(contatos) - 1):
         i_start = contatos[k]
         i_end = contatos[k + 1]
-        ys: list[float] = []
-        for j in range(i_start, i_end + 1):
-            y = _y_com(frames[j])
-            if y is not None:
-                ys.append(y)
+        ys = _y_com_validos_no_intervalo(frames, i_start, i_end)
         if len(ys) < 2:
             continue
         delta_y = max(ys) - min(ys)
