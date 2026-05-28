@@ -1,16 +1,4 @@
-"""Métricas per-frame para o endpoint de dados biomecânicos brutos (US-018).
-
-Este módulo expõe funções que operam em **um único** ``FrameKeypoints`` e
-retornam o valor da métrica naquele frame (ou ``None`` quando os keypoints
-requeridos estão ausentes). Diferem das funções agregadas em
-``biomechanics.joelho``/``cotovelo``/``tronco``/``oscilacao`` (que produzem
-média/ciclos sobre a série inteira) porque o endpoint ``/raw`` expõe a série
-temporal frame a frame, sem filtragem por fase de apoio ou detecção de
-ciclo.
-
-Convenção de ângulo (alinhada aos demais módulos biomecânicos do backend):
-articulação estendida ⇒ 180°; flexão máxima ⇒ próximo de 0°.
-"""
+"""Per-frame biomechanics metrics for the raw data endpoint (US-018)."""
 
 from __future__ import annotations
 
@@ -24,6 +12,7 @@ from server.src.biomechanics.cotovelo import (
     KP_PULSO_DIR,
     KP_PULSO_ESQ,
 )
+from server.src.biomechanics.geometry import angulo_interno
 from server.src.biomechanics.joelho import (
     KP_JOELHO_DIR,
     KP_JOELHO_ESQ,
@@ -32,8 +21,17 @@ from server.src.biomechanics.joelho import (
     KP_TORNOZELO_DIR,
     KP_TORNOZELO_ESQ,
 )
-from server.src.biomechanics.geometry import angulo_interno
 from server.src.video_pipeline import FrameKeypoints
+
+_JOELHO_INDICES = {
+    "esq": (KP_QUADRIL_ESQ, KP_JOELHO_ESQ, KP_TORNOZELO_ESQ),
+    "dir": (KP_QUADRIL_DIR, KP_JOELHO_DIR, KP_TORNOZELO_DIR),
+}
+
+_COTOVELO_INDICES = {
+    "esq": (KP_OMBRO_ESQ, KP_COTOVELO_ESQ, KP_PULSO_ESQ),
+    "dir": (KP_OMBRO_DIR, KP_COTOVELO_DIR, KP_PULSO_DIR),
+}
 
 
 def _coord(frame: FrameKeypoints, idx: int) -> tuple[float, float] | None:
@@ -53,62 +51,43 @@ def _angulo_interno(
     return angulo_interno(a, b, c)
 
 
-def angulo_joelho_frame(frame: FrameKeypoints, lado: str) -> float | None:
-    """Ângulo interno do joelho no frame (esq/dir). None se keypoint ausente."""
-    if lado == "esq":
-        quadril_idx, joelho_idx, tornozelo_idx = (
-            KP_QUADRIL_ESQ,
-            KP_JOELHO_ESQ,
-            KP_TORNOZELO_ESQ,
-        )
-    elif lado == "dir":
-        quadril_idx, joelho_idx, tornozelo_idx = (
-            KP_QUADRIL_DIR,
-            KP_JOELHO_DIR,
-            KP_TORNOZELO_DIR,
-        )
-    else:
+def _indices_por_lado(
+    indices_por_lado: dict[str, tuple[int, int, int]],
+    lado: str,
+) -> tuple[int, int, int]:
+    try:
+        return indices_por_lado[lado]
+    except KeyError:
         raise ValueError(f"lado inválido: {lado!r}")
-    quadril = _coord(frame, quadril_idx)
-    joelho = _coord(frame, joelho_idx)
-    tornozelo = _coord(frame, tornozelo_idx)
-    if quadril is None or joelho is None or tornozelo is None:
+
+
+def _angulo_tres_pontos_frame(
+    frame: FrameKeypoints,
+    indices: tuple[int, int, int],
+) -> float | None:
+    primeiro_idx, vertice_idx, terceiro_idx = indices
+    primeiro = _coord(frame, primeiro_idx)
+    vertice = _coord(frame, vertice_idx)
+    terceiro = _coord(frame, terceiro_idx)
+    if primeiro is None or vertice is None or terceiro is None:
         return None
-    return _angulo_interno(quadril, joelho, tornozelo)
+    return _angulo_interno(primeiro, vertice, terceiro)
+
+
+def angulo_joelho_frame(frame: FrameKeypoints, lado: str) -> float | None:
+    """Internal knee angle in a single frame. Returns None if keypoints are missing."""
+    indices = _indices_por_lado(_JOELHO_INDICES, lado)
+    return _angulo_tres_pontos_frame(frame, indices)
 
 
 def angulo_cotovelo_frame(frame: FrameKeypoints, lado: str) -> float | None:
-    """Ângulo interno do cotovelo no frame (esq/dir). None se keypoint ausente."""
-    if lado == "esq":
-        ombro_idx, cotovelo_idx, pulso_idx = (
-            KP_OMBRO_ESQ,
-            KP_COTOVELO_ESQ,
-            KP_PULSO_ESQ,
-        )
-    elif lado == "dir":
-        ombro_idx, cotovelo_idx, pulso_idx = (
-            KP_OMBRO_DIR,
-            KP_COTOVELO_DIR,
-            KP_PULSO_DIR,
-        )
-    else:
-        raise ValueError(f"lado inválido: {lado!r}")
-    ombro = _coord(frame, ombro_idx)
-    cotovelo = _coord(frame, cotovelo_idx)
-    pulso = _coord(frame, pulso_idx)
-    if ombro is None or cotovelo is None or pulso is None:
-        return None
-    return _angulo_interno(ombro, cotovelo, pulso)
+    """Internal elbow angle in a single frame. Returns None if keypoints are missing."""
+    indices = _indices_por_lado(_COTOVELO_INDICES, lado)
+    return _angulo_tres_pontos_frame(frame, indices)
 
 
 def inclinacao_tronco_frame(frame: FrameKeypoints) -> float | None:
-    """Inclinação anterior do tronco no frame em graus.
-
-    Sem filtro de apoio médio — o endpoint ``/raw`` devolve a série
-    temporal completa frame a frame. Retorna ``None`` quando algum dos
-    quatro keypoints requeridos (ombros e quadris) está ausente ou quando
-    o tronco está horizontal/invertido (``-ΔY ≤ 0``).
-    """
+    """Anterior trunk inclination in degrees for a single frame."""
     ombro_esq = _coord(frame, KP_OMBRO_ESQ)
     ombro_dir = _coord(frame, KP_OMBRO_DIR)
     quadril_esq = _coord(frame, KP_QUADRIL_ESQ)
@@ -120,7 +99,11 @@ def inclinacao_tronco_frame(frame: FrameKeypoints) -> float | None:
         or quadril_dir is None
     ):
         return None
-    topo = ((ombro_esq[0] + ombro_dir[0]) / 2.0, (ombro_esq[1] + ombro_dir[1]) / 2.0)
+
+    topo = (
+        (ombro_esq[0] + ombro_dir[0]) / 2.0,
+        (ombro_esq[1] + ombro_dir[1]) / 2.0,
+    )
     base = (
         (quadril_esq[0] + quadril_dir[0]) / 2.0,
         (quadril_esq[1] + quadril_dir[1]) / 2.0,
@@ -133,7 +116,7 @@ def inclinacao_tronco_frame(frame: FrameKeypoints) -> float | None:
 
 
 def y_com_frame(frame: FrameKeypoints) -> float | None:
-    """Y do centro de massa (média dos quadris) no frame. None se ausente."""
+    """Y coordinate of the center of mass proxy in a single frame."""
     quadril_esq = _coord(frame, KP_QUADRIL_ESQ)
     quadril_dir = _coord(frame, KP_QUADRIL_DIR)
     if quadril_esq is None or quadril_dir is None:
