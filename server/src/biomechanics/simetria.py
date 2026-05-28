@@ -51,7 +51,7 @@ class SimetriaResultado:
 def indice_simetria(
     valor_esq: float | None, valor_dir: float | None
 ) -> float | None:
-    """Calcula o índice de simetria (%) entre dois valores esq/dir.
+    """Calcula simetria para métricas biomecânicas não negativas.
 
     Fórmula: ``IS = |valor_esq - valor_dir| / ((valor_esq + valor_dir) / 2) × 100``.
 
