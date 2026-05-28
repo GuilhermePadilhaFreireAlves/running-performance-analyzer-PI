@@ -20,6 +20,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence
 
+from server.src.biomechanics.contact import (
+    find_initial_contact_indices as _find_initial_contact_indices,
+)
 from server.src.video_pipeline import FrameKeypoints
 
 KP_TORNOZELO_DIR = 16
@@ -45,38 +48,6 @@ class Cadencia:
     contatos_pe_direito: int
     duracao_segundos: float
     eventos: tuple[CadenciaEvento, ...]
-
-
-def _ankle_y(frame: FrameKeypoints, idx: int) -> float | None:
-    if idx >= len(frame.keypoints):
-        return None
-    kp = frame.keypoints[idx]
-    if kp is None:
-        return None
-    return kp[1]
-
-
-def _find_initial_contact_indices(
-    frames: Sequence[FrameKeypoints], tornozelo_idx: int
-) -> list[int]:
-    """Picos locais estritos de Y do tornozelo (ignora bordas).
-
-    Mesma lógica usada em `biomechanics.joelho._find_initial_contact_indices`:
-    frame `i` é pico quando o Y do tornozelo é estritamente maior que o dos
-    vizinhos imediatos, exigindo que o tornozelo esteja detectado nos três
-    frames. Bordas (`i==0` e `i==n-1`) nunca são picos.
-    """
-    n = len(frames)
-    peaks: list[int] = []
-    for i in range(1, n - 1):
-        cur = _ankle_y(frames[i], tornozelo_idx)
-        prev_ = _ankle_y(frames[i - 1], tornozelo_idx)
-        nxt = _ankle_y(frames[i + 1], tornozelo_idx)
-        if cur is None or prev_ is None or nxt is None:
-            continue
-        if cur > prev_ and cur > nxt:
-            peaks.append(i)
-    return peaks
 
 
 def calcular_cadencia(
