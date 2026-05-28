@@ -27,9 +27,10 @@ from server.src.video_pipeline import FrameKeypoints
 
 KP_TORNOZELO_DIR = 16
 
-MSG_FPS_INVALIDO = (
+MSG_FPS_INVALIDO_CADENCIA = (
     "FPS inválido — é necessário FPS positivo para calcular a cadência."
 )
+MSG_FPS_INVALIDO = MSG_FPS_INVALIDO_CADENCIA
 
 
 @dataclass(frozen=True)
@@ -64,10 +65,10 @@ def calcular_cadencia(
 
     Retorna `None` quando a lista de frames está vazia ou quando nenhum
     contato é detectado (não há ciclos suficientes para estimar cadência).
-    Levanta `ValueError(MSG_FPS_INVALIDO)` quando `fps` é não-positivo.
+    Levanta `ValueError(MSG_FPS_INVALIDO_CADENCIA)` quando `fps` é não-positivo.
     """
     if fps <= 0:
-        raise ValueError(MSG_FPS_INVALIDO)
+        raise ValueError(MSG_FPS_INVALIDO_CADENCIA)
     if len(frames) == 0:
         return None
     contatos = _find_initial_contact_indices(frames, KP_TORNOZELO_DIR)

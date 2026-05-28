@@ -7,6 +7,7 @@ pelas histórias de cálculo (US-007 em diante).
 
 from server.src.biomechanics.cadencia import (
     MSG_FPS_INVALIDO,
+    MSG_FPS_INVALIDO_CADENCIA,
     Cadencia,
     calcular_cadencia,
 )
@@ -73,6 +74,7 @@ from server.src.biomechanics.simetria import (
     indice_simetria,
 )
 from server.src.biomechanics.tcs import (
+    MSG_FPS_INVALIDO_TCS,
     TcsLado,
     TcsResultado,
     calcular_tcs,
@@ -102,6 +104,8 @@ __all__ = [
     "KP_TORNOZELO_ESQ",
     "MSG_ALTURA_AUSENTE",
     "MSG_FPS_INVALIDO",
+    "MSG_FPS_INVALIDO_CADENCIA",
+    "MSG_FPS_INVALIDO_TCS",
     "MSG_SEM_FRAMES_VALIDOS",
     "NOTA_MAXIMA",
     "PESO_ATENCAO",

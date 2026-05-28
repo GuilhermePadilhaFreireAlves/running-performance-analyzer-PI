@@ -27,9 +27,10 @@ from server.src.video_pipeline import FrameKeypoints
 KP_TORNOZELO_ESQ = 15
 KP_TORNOZELO_DIR = 16
 
-MSG_FPS_INVALIDO = (
+MSG_FPS_INVALIDO_TCS = (
     "FPS inválido — é necessário FPS positivo para calcular o TCS."
 )
+MSG_FPS_INVALIDO = MSG_FPS_INVALIDO_TCS
 
 
 @dataclass(frozen=True)
@@ -156,12 +157,12 @@ def calcular_tcs(
       3. ``tcs_ms = (frames_de_contato / fps) × 1000`` por ciclo.
       4. Média sobre ciclos válidos.
 
-    Levanta ``ValueError(MSG_FPS_INVALIDO)`` quando ``fps <= 0``. Quando
+    Levanta ``ValueError(MSG_FPS_INVALIDO_TCS)`` quando ``fps <= 0``. Quando
     nenhum ciclo é detectado em um lado, o campo correspondente vem
     ``None``.
     """
     if fps <= 0:
-        raise ValueError(MSG_FPS_INVALIDO)
+        raise ValueError(MSG_FPS_INVALIDO_TCS)
     esquerdo = _calcular_lado(frames, KP_TORNOZELO_ESQ, fps)
     direito = _calcular_lado(frames, KP_TORNOZELO_DIR, fps)
     return TcsResultado(esquerdo=esquerdo, direito=direito)
