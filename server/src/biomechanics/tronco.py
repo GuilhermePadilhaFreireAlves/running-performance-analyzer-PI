@@ -38,6 +38,8 @@ KP_JOELHO_ESQ = 13
 KP_JOELHO_DIR = 14
 KP_TORNOZELO_ESQ = 15
 KP_TORNOZELO_DIR = 16
+JOELHO_ESQ = (KP_QUADRIL_ESQ, KP_JOELHO_ESQ, KP_TORNOZELO_ESQ)
+JOELHO_DIR = (KP_QUADRIL_DIR, KP_JOELHO_DIR, KP_TORNOZELO_DIR)
 
 FLEXAO_APOIO_MEDIO_MIN_GRAUS = 40.0
 FLEXAO_APOIO_MEDIO_MAX_GRAUS = 45.0
@@ -99,10 +101,7 @@ def _flexao_joelho(
 
 def _eh_apoio_medio(frame: FrameKeypoints) -> bool:
     """Frame é apoio médio se algum joelho tem flexão em [40°, 45°]."""
-    for quadril_idx, joelho_idx, tornozelo_idx in (
-        (KP_QUADRIL_ESQ, KP_JOELHO_ESQ, KP_TORNOZELO_ESQ),
-        (KP_QUADRIL_DIR, KP_JOELHO_DIR, KP_TORNOZELO_DIR),
-    ):
+    for quadril_idx, joelho_idx, tornozelo_idx in (JOELHO_ESQ, JOELHO_DIR):
         flexao = _flexao_joelho(frame, quadril_idx, joelho_idx, tornozelo_idx)
         if flexao is None:
             continue
