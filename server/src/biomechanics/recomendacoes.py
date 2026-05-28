@@ -73,12 +73,20 @@ class AnaliseResultado:
 # ---------------- Classificadores por métrica (Seção 9 do PRD) ----------------
 
 
+JOELHO_FLEXAO_IDEAL_MIN = 15.0
+JOELHO_FLEXAO_IDEAL_MAX = 25.0
+JOELHO_FLEXAO_CRITICO_MIN = 10.0
+JOELHO_FLEXAO_CRITICO_MAX = 35.0
+
 def _classificar_joelho_interno(angulo_interno: float) -> str:
     flexao = 180.0 - angulo_interno
-    if 15.0 <= flexao <= 25.0:
+
+    if JOELHO_FLEXAO_IDEAL_MIN <= flexao <= JOELHO_FLEXAO_IDEAL_MAX:
         return SEVERIDADE_INFORMATIVO
-    if flexao < 10.0 or flexao > 35.0:
+
+    if flexao < JOELHO_FLEXAO_CRITICO_MIN or flexao > JOELHO_FLEXAO_CRITICO_MAX:
         return SEVERIDADE_CRITICO
+
     return SEVERIDADE_ATENCAO
 
 
